@@ -118,6 +118,7 @@ void menuRun()
 {   int pos= 0;
     char menu[4][16]= {"Target temp  (1)", "Tolerance    (2)", "Measure rate (3)", "P-save mode  (4)"};
 	uint8_t values[4]= {targetTemp, Tolerance, measureRate, (BIT_READ(progFlags, ECONOMY))};
+    LCD_Clear();
     while (1){
         if (!BIT_READ(CONTROL_PORT, BUTTON_OK)){
             int value= values[pos];
@@ -167,8 +168,14 @@ void menuRun()
     }
 }
 
+void LCD_Clear()
+{
+	//TODO: определить
+}
+
 void menuStop() 
 {
+    LCD_Clear();
 	LCD_DisplayAll();
 }
 
@@ -296,6 +303,7 @@ int main(void)
         //////////////////////////////////////////////////////////////////////////
         if (BIT_READ(progFlags, LCD_ON))
         {
+            LCD_Clear();
             LCD_DisplayAll();
         }
     }
