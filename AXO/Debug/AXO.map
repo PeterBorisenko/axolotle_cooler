@@ -49,6 +49,8 @@ Discarded input sections
  .bss           0x00000000        0x0 d:/winavr-20100110/bin/../lib/gcc/avr/4.3.3/../../../../avr/lib/avr5/crtm168p.o
  .text          0x00000000        0x0 AXO.o
  .bss           0x00000000        0x0 AXO.o
+ .text.LCD_Clear
+                0x00000000        0x0 AXO.o
  .text.LCD_turnOn
                 0x00000000        0x0 AXO.o
  .text.LCD_turnOff
@@ -447,7 +449,7 @@ LOAD d:/winavr-20100110/bin/../lib/gcc/avr/4.3.3/avr5\libgcc.a
                 0x00800113        0x4 AXO.o
  *(.rodata)
  *(.rodata*)
- .rodata.C.9.1280
+ .rodata.C.9.1282
                 0x00800117       0x40 AXO.o
  *(.gnu.linkonce.d*)
                 0x00800158                . = ALIGN (0x2)
@@ -528,38 +530,38 @@ LOAD d:/winavr-20100110/bin/../lib/gcc/avr/4.3.3/avr5\libgcc.a
 .debug_sfnames
  *(.debug_sfnames)
 
-.debug_aranges  0x00000000       0x78
+.debug_aranges  0x00000000       0x80
  *(.debug_aranges)
  .debug_aranges
-                0x00000000       0x78 AXO.o
+                0x00000000       0x80 AXO.o
 
 .debug_pubnames
-                0x00000000       0xd2
+                0x00000000       0xe0
  *(.debug_pubnames)
  .debug_pubnames
-                0x00000000       0xd2 AXO.o
+                0x00000000       0xe0 AXO.o
 
-.debug_info     0x00000000      0x298
+.debug_info     0x00000000      0x2ab
  *(.debug_info)
- .debug_info    0x00000000      0x298 AXO.o
+ .debug_info    0x00000000      0x2ab AXO.o
  *(.gnu.linkonce.wi.*)
 
 .debug_abbrev   0x00000000      0x11a
  *(.debug_abbrev)
  .debug_abbrev  0x00000000      0x11a AXO.o
 
-.debug_line     0x00000000      0x522
+.debug_line     0x00000000      0x53c
  *(.debug_line)
- .debug_line    0x00000000      0x522 AXO.o
+ .debug_line    0x00000000      0x53c AXO.o
 
-.debug_frame    0x00000000       0xd0
+.debug_frame    0x00000000       0xe0
  *(.debug_frame)
- .debug_frame   0x00000000       0xd0 AXO.o
+ .debug_frame   0x00000000       0xe0 AXO.o
 
-.debug_str      0x00000000      0x190
+.debug_str      0x00000000      0x19a
  *(.debug_str)
- .debug_str     0x00000000      0x190 AXO.o
-                                0x1c9 (size before relaxing)
+ .debug_str     0x00000000      0x19a AXO.o
+                                0x1d3 (size before relaxing)
 
 .debug_loc      0x00000000       0xf0
  *(.debug_loc)
@@ -570,5 +572,5 @@ LOAD d:/winavr-20100110/bin/../lib/gcc/avr/4.3.3/avr5\libgcc.a
 OUTPUT(AXO.elf elf32-avr)
 LOAD linker stubs
 
-.debug_ranges   0x00000000       0x88
- .debug_ranges  0x00000000       0x88 AXO.o
+.debug_ranges   0x00000000       0x90
+ .debug_ranges  0x00000000       0x90 AXO.o

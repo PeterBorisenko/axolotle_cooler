@@ -85,6 +85,11 @@ void turnOffCooler()
     BIT_OFF(progFlags, COOLING);
 }
 
+void LCD_Clear()
+{
+    //TODO: определить
+}
+
 void LCD_Write(uint8_t data, uint8_t posY, uint8_t posX ) 
 {
     cli();
@@ -166,11 +171,6 @@ void menuRun()
         if(pos > 3) pos= 0;
         if(pos < 0) pos= 3;
     }
-}
-
-void LCD_Clear()
-{
-	//TODO: определить
 }
 
 void menuStop() 

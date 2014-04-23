@@ -9,33 +9,33 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, ALLOC, LOAD, READONLY, CODE
   2 .bss          0000000a  00800158  00800158  00000c22  2**0
                   ALLOC
-  3 .debug_aranges 00000078  00000000  00000000  00000c22  2**0
+  3 .debug_aranges 00000080  00000000  00000000  00000c22  2**0
                   CONTENTS, READONLY, DEBUGGING
-  4 .debug_pubnames 000000d2  00000000  00000000  00000c9a  2**0
+  4 .debug_pubnames 000000e0  00000000  00000000  00000ca2  2**0
                   CONTENTS, READONLY, DEBUGGING
-  5 .debug_info   00000298  00000000  00000000  00000d6c  2**0
+  5 .debug_info   000002ab  00000000  00000000  00000d82  2**0
                   CONTENTS, READONLY, DEBUGGING
-  6 .debug_abbrev 0000011a  00000000  00000000  00001004  2**0
+  6 .debug_abbrev 0000011a  00000000  00000000  0000102d  2**0
                   CONTENTS, READONLY, DEBUGGING
-  7 .debug_line   00000522  00000000  00000000  0000111e  2**0
+  7 .debug_line   0000053c  00000000  00000000  00001147  2**0
                   CONTENTS, READONLY, DEBUGGING
-  8 .debug_frame  000000d0  00000000  00000000  00001640  2**2
+  8 .debug_frame  000000e0  00000000  00000000  00001684  2**2
                   CONTENTS, READONLY, DEBUGGING
-  9 .debug_str    00000190  00000000  00000000  00001710  2**0
+  9 .debug_str    0000019a  00000000  00000000  00001764  2**0
                   CONTENTS, READONLY, DEBUGGING
- 10 .debug_loc    000000f0  00000000  00000000  000018a0  2**0
+ 10 .debug_loc    000000f0  00000000  00000000  000018fe  2**0
                   CONTENTS, READONLY, DEBUGGING
- 11 .debug_ranges 00000088  00000000  00000000  00001990  2**0
+ 11 .debug_ranges 00000090  00000000  00000000  000019ee  2**0
                   CONTENTS, READONLY, DEBUGGING
 
 Disassembly of section .text:
 
 00000000 <__vectors>:
-	//TODO: определить
-    sei();
+	BIT_OFF(CONTROL_PORT, LOAD);
+    BIT_OFF(progFlags, COOLING);
 }
 
-void LCD_turnOn() 
+void LCD_Clear()
 {
    0:	33 c0       	rjmp	.+102    	; 0x68 <__ctors_end>
    2:	00 00       	nop
@@ -171,6 +171,8 @@ void turnOffCooler()
   ca:	08 95       	ret
 
 000000cc <LCD_Write>:
+    //TODO: определить
+}
 
 void LCD_Write(uint8_t data, uint8_t posY, uint8_t posX ) 
 {
@@ -332,6 +334,7 @@ void menuRun()
  202:	83 83       	std	Z+3, r24	; 0x03
  204:	cc 24       	eor	r12, r12
  206:	dd 24       	eor	r13, r13
+    LCD_Clear();
     while (1){
         if (!BIT_READ(CONTROL_PORT, BUTTON_OK)){
  208:	0f 2e       	mov	r0, r31
@@ -375,6 +378,7 @@ void menuRun()
  22e:	cf 2e       	mov	r12, r31
  230:	dd 24       	eor	r13, r13
  232:	f0 2d       	mov	r31, r0
+    LCD_Clear();
     while (1){
         if (!BIT_READ(CONTROL_PORT, BUTTON_OK)){
  234:	f3 01       	movw	r30, r6
@@ -657,6 +661,7 @@ void menuRun()
 
 void menuStop() 
 {
+    LCD_Clear();
 	LCD_DisplayAll();
  402:	67 ce       	rjmp	.-818    	; 0xd2 <LCD_DisplayAll>
 }
@@ -1026,6 +1031,7 @@ int main(void)
  626:	80 ff       	sbrs	r24, 0
  628:	73 cf       	rjmp	.-282    	; 0x510 <__stack+0x11>
         {
+            LCD_Clear();
             LCD_DisplayAll();
  62a:	53 dd       	rcall	.-1370   	; 0xd2 <LCD_DisplayAll>
  62c:	71 cf       	rjmp	.-286    	; 0x510 <__stack+0x11>
