@@ -48,12 +48,12 @@
 ///порт D///
 #define CONTROL_REG DDRD
 #define CONTROL_PORT PORTD
-#define LCD_LED PIND2
-#define LOAD PIND3
-#define BUTTON_P PIND4
-#define BUTTON_M PIND5
-#define BUTTON_OK PIND6
-#define BUTTON_BACK PIND7
+#define LCD_LED PIND7
+#define LOAD PIND6
+#define BUTTON_P PIND5
+#define BUTTON_M PIND4
+#define BUTTON_OK PIND3
+#define BUTTON_BACK PIND2
 ///флаги///
 #define LCD_ON 0
 #define MENU_ON 1
@@ -71,18 +71,32 @@ volatile static double temperatureValue;
 volatile static double targetTemp= 20.0;
 volatile static double Tolerance= 0.0;
 volatile static uint16_t measureRate= 0x0100; // поумолчанию - частота замера (F_CPU/1024)/2
-static uint8_t progFlags= 0b00000000;
+uint8_t progFlags= 0b00000000;
 
-void turnOnCooler() 
+inline static void turnOnCooler() 
 {
 	BIT_ON(CONTROL_PORT, LOAD);
     BIT_ON(progFlags, COOLING);
 }
 
-void turnOffCooler() 
+inline static void turnOffCooler() 
 {
 	BIT_OFF(CONTROL_PORT, LOAD);
     BIT_OFF(progFlags, COOLING);
+}
+
+void turnOnPowerSave()
+//TODO: разрешить прерывание INT1
+{
+    //BIT_ON(PRR, PRADC); // режим работы во сне
+    //BIT_ON(SMCR, SM0);
+}
+
+void turnOffPowerSave()
+//TODO: запретить прерывание INT1
+{
+    //BIT_OFF(PRR, PRADC);
+    //BIT_OFF(SMCR, SM0);
 }
 
 void LCD_Clear()
@@ -99,12 +113,12 @@ void LCD_Write(uint8_t data, uint8_t posY, uint8_t posX )
 
 void LCD_turnOn() 
 {
-	//TODO: определить
+	BIT_OFF(CONTROL_PORT, LCD_LED); // ????????? ?????????
 }
 
 void LCD_turnOff() 
 {
-	//TODO: определить
+	BIT_ON(CONTROL_PORT, LCD_LED); // включить подсветку дисплея
 }
 
 void LCD_DisplayAll() 
@@ -118,6 +132,11 @@ void LCD_DisplayAll()
     }
 }
 
+inline void menuStop()
+{
+    LCD_Clear();
+    LCD_DisplayAll();
+}
 
 void menuRun()
 {   int pos= 0;
@@ -126,12 +145,21 @@ void menuRun()
     LCD_Clear();
     while (1){
         if (!BIT_READ(CONTROL_PORT, BUTTON_OK)){
+            BIT_OFF(progFlags, INACTIVE);
             int value= values[pos];
             while(1){
                 BIT_OFF(progFlags, INACTIVE); // выйти из режима неактивности
                 LCD_Write(values[pos],1,0);
-                if (!BIT_READ(CONTROL_PORT, BUTTON_P)) values[pos]++;
-                if (!BIT_READ(CONTROL_PORT, BUTTON_M)) values[pos]--;
+                if (!BIT_READ(CONTROL_PORT, BUTTON_P))
+                {
+                    BIT_OFF(progFlags, INACTIVE);
+                    values[pos]++;
+                }
+                if (!BIT_READ(CONTROL_PORT, BUTTON_M))
+                {
+                    BIT_OFF(progFlags, INACTIVE);
+                    values[pos]--;
+                }
                 if (!BIT_READ(CONTROL_PORT, BUTTON_BACK)) break;
                 switch (pos)
                 {
@@ -159,24 +187,30 @@ void menuRun()
                     }
                     else{
                         BIT_WRITE(progFlags, ECONOMY, value);
-                    }                        
+                    }          
                 }                    
             }
         }
         LCD_Write(menu[pos],0,0);
         LCD_Write(values[pos],1,0);
-        if (!BIT_READ(CONTROL_PORT, BUTTON_P)) pos++;
-        if (!BIT_READ(CONTROL_PORT, BUTTON_M)) pos--;
+        if (!BIT_READ(CONTROL_PORT, BUTTON_P))
+        {
+            BIT_OFF(progFlags, INACTIVE);
+            pos++;
+        }
+        if (!BIT_READ(CONTROL_PORT, BUTTON_M))
+        {
+            BIT_OFF(progFlags, INACTIVE);
+            pos--;
+        }
         if (!BIT_READ(CONTROL_PORT, BUTTON_BACK)) break;
         if(pos > 3) pos= 0;
         if(pos < 0) pos= 3;
+        if(BIT_READ(progFlags, INACTIVE)) break;
     }
-}
-
-void menuStop() 
-{
-    LCD_Clear();
-	LCD_DisplayAll();
+    BIT_OFF(progFlags, MENU_ON);
+    BIT_OFF(progFlags, INACTIVE);
+    menuStop();
 }
 
 int main(void)
@@ -212,9 +246,7 @@ int main(void)
     //ADCSRA |= 1 << ADATE; // включить непрерывное преобразование
     ADCSRA |= 1 << ADIE; // разрешить прерывания АЦП
     ADCSRA |= 1 << ADEN; // разрешить работу АЦП
-    DIDR0 |= 1 << ADC0D; // отключить цифровой вход ADC0D 
-    //PRR  |= 1 << PRADC; // режим работы во сне
-    //SMCR |= 1 << SM0;
+    //DIDR0 |= 1 << ADC0D; // отключить цифровой вход ADC0D 
     //////////////////////////////////////////////////////////////////////////
     
     ///инициализация таймера 1///
@@ -232,78 +264,55 @@ int main(void)
     
     sei();
     
-    //SMCR |= 1 << SE; // засыпает
-    
     ///главный цикл///
     while(1)
     {
         //////////////////////////////////////////////////////////////////////////
         // задача 1: сравнивать значения датчика и управлять нагрузкой
         //////////////////////////////////////////////////////////////////////////
-        if (temperatureValue >= targetTemp + Tolerance)
-        {
-            turnOnCooler(); // включить охладитель
-        }
-        else if(temperatureValue <= targetTemp)
-        {
-            turnOffCooler(); // выключить охладитель
-        }
+
         //////////////////////////////////////////////////////////////////////////
-        // задача 2: выходить из меню и выключать подсветку по истечении таймаута
-        //////////////////////////////////////////////////////////////////////////
-        if(runSeconds >= timeOut) // проверить количество секунд
-        {
-            if(!BIT_READ(progFlags, INACTIVE)){ // если не активен
-                if(BIT_READ(progFlags, MENU_ON)){ // если меню включено
-                    BIT_OFF(progFlags, MENU_ON); 
-                } else if(BIT_READ(progFlags, LCD_ON)){ // если подсветка включена
-                    BIT_OFF(progFlags, LCD_ON);
-                    BIT_OFF(CONTROL_PORT, LCD_LED); // выключить подсветку
-                    LCD_turnOff();
-                }
-                menuStop(); // выйти из меню
-            }
-            if((BIT_READ(progFlags, MENU_ON))||(BIT_READ(progFlags, LCD_ON))) { // если меню или подсветка включены 
-                BIT_ON(progFlags, INACTIVE); // установить флаг неактивности
-            }
-            runSeconds= 0; // сбрасываем счетчик секунд
-        }
-        //////////////////////////////////////////////////////////////////////////
-        // задача 3: включать подсветку если нажата кнопка
+        // задача 3: включать подсветку если нажата какая-либо кнопка
         //////////////////////////////////////////////////////////////////////////
         if ((!BIT_READ(PIND, BUTTON_M))||(!BIT_READ(PIND, BUTTON_P))||(!BIT_READ(PIND, BUTTON_BACK))) // если нажата любая кнопка
         {
             BIT_OFF(progFlags, INACTIVE); // выйти из режима неактивности
             BIT_ON(progFlags, LCD_ON);
             LCD_turnOn();
-            BIT_ON(CONTROL_PORT, LCD_LED); // включить подсветку дисплея
         }
         //////////////////////////////////////////////////////////////////////////
         // задача 4: входить в меню если нажата кнопка OK/MENU
         //////////////////////////////////////////////////////////////////////////
-        if (!BIT_READ(PIND,BUTTON_OK)) // если нажата кнопка OK/MENU
+        if (!BIT_READ(PIND,BUTTON_OK)) // если нажата кнопка OK/MENU                        //TODO: в режиме P-save кнопка OK/MENU должна висеть на прерывании INT1
         {
             BIT_OFF(progFlags, INACTIVE); // выйти из режима неактивности
             if (!BIT_READ(progFlags, LCD_ON))
             {
-                LCD_turnOn();
                 BIT_ON(progFlags, LCD_ON); // включить подсветку дисплея
+                LCD_turnOn();
             }
             BIT_ON(progFlags, MENU_ON); // включить меню
-        }
-        //////////////////////////////////////////////////////////////////////////
-        // задача 5: запускать обработку команд если меню включено
-        //////////////////////////////////////////////////////////////////////////
-        if(BIT_READ(progFlags, MENU_ON)) 
-        {
             menuRun(); // обработка команд меню
         }
         //////////////////////////////////////////////////////////////////////////
-        // задача 6: отобажать данные если подсветка включена
+        // выйти из меню и выключить подсветку по истечении таймаута
+        //////////////////////////////////////////////////////////////////////////
+        if(BIT_READ(progFlags, INACTIVE)){ // ???? ?? ???????
+            if(BIT_READ(progFlags, LCD_ON)){ // ???? ????????? ????????
+                BIT_OFF(progFlags, LCD_ON);
+                LCD_turnOff();
+            }
+        }
+        if ((BIT_READ(progFlags, ECONOMY))&&(BIT_READ(progFlags, INACTIVE)))
+        {
+            //SMCR |= 1 << SE; // засыпает
+        }
+        //////////////////////////////////////////////////////////////////////////
+        // задача 5: отобажать данные если подсветка включена
         //////////////////////////////////////////////////////////////////////////
         if (BIT_READ(progFlags, LCD_ON))
         {
-            LCD_Clear();
+            //LCD_Clear();
             LCD_DisplayAll();
         }
     }
@@ -311,16 +320,36 @@ int main(void)
 //////////////////////////////////////////////////////////////////////////
 
 /// обработчики прерываний///
-ISR(ADC_vect){
+
+ISR(ADC_vect){                                                      //TODO: должен будить процессор в режиме P-save
     temperatureValue= BYTE_TO_TEMP(ADCH);
+    if (temperatureValue >= targetTemp + Tolerance)
+    {
+        turnOnCooler(); // включить охладитель
+    }
+    else if(temperatureValue <= targetTemp)
+    {
+        turnOffCooler(); // выключить охладитель
+    }
 }
 
-ISR(TIMER2_OVF_vect){
+ISR(TIMER2_OVF_vect){                                               //TODO: должен будить процессор в режиме P-save
     runSeconds++;
+    if (runSeconds==timeOut)
+    {
+        BIT_ON(progFlags, INACTIVE);
+    }
+    runSeconds= 0; // сбрасываем счетчик секунд
     return;
 }
 
-ISR(TIMER1_COMPA_vect){
+ISR(TIMER1_COMPA_vect){                                             //TODO: должен будить процессор в режиме P-save
     ADCSRA |= 1 << ADSC;
     return;
+}
+
+ISR(INT1_vect){                                                     //TODO: должен будить процессор в режиме P-save
+    turnOffPowerSave();
+    LCD_turnOn();
+    LCD_DisplayAll();
 }
