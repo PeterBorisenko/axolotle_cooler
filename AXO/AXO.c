@@ -30,9 +30,9 @@
 #define CIRCLE(amt, low, high) ((amt)<(low)?(high):((amt)>(high)?(low):(amt)))
 #define ROUND(x) ((x)>=0?(long)((x)+0.5):(long)((x)-0.5))
 
-#define BYTE_TO_VOLTS(x) ((x * 5.0)/256.0)
-#define BYTE_TO_MILLIVOLTS(x) ((x * 5000.0)/256.0)
-#define BYTE_TO_TEMP(x) ((BYTE_TO_MILLIVOLTS(x) - 500.0)/10.0) // формула, специфичная для датчика TMP036: T= (Vin(mV) - 500)/10
+#define BYTE_TO_VOLTS(x) ((x * 5.0)/1024)
+#define BYTE_TO_MILLIVOLTS(x) ((x * 5000.0)/1024)
+#define BYTE_TO_TEMP(x) (x * 0.19) // оригинальная формула, специфичная для датчика TMP036: T= (Vin(mV) - 500)/10
 
 ///порт B///
 #define LCD_REG DDRB
@@ -71,19 +71,25 @@ uint8_t timeOut= 0x0A;
 volatile static double temperatureValue;
 volatile static double targetTemp= 20.0;
 volatile static double Tolerance= 0.0;
-volatile static uint16_t measureRate= 0x0100; // поумолчанию - частота замера (F_CPU/1024)/2
+volatile static uint8_t measureRate= 0x0100; // поумолчанию - частота замера (F_CPU/1024)/2
 uint8_t progFlags= 0b00000000;
 
 inline static void turnOnCooler() 
 {
-	BIT_ON(CONTROL_PORT, LOAD);
-    BIT_ON(progFlags, COOLING);
+    if(!BIT_READ(progFlags, COOLING))
+    {
+	    BIT_ON(CONTROL_PORT, LOAD);
+        BIT_ON(progFlags, COOLING);
+    }
 }
 
 inline static void turnOffCooler() 
 {
-	BIT_OFF(CONTROL_PORT, LOAD);
-    BIT_OFF(progFlags, COOLING);
+    if(BIT_READ(progFlags, COOLING))
+    {
+	    BIT_OFF(CONTROL_PORT, LOAD);
+        BIT_OFF(progFlags, COOLING);
+    }
 }
 
 void turnOnSleep()
@@ -157,10 +163,14 @@ inline int inRange(int pos, int value)
         value= CONSTRAIN(value, 0, 1);
         break;
     }
+    return value;
 }
 
-void menuRun()
-{   
+void menuRun()              //TODO: определить пункты меню через структуры, содержащие имя, значение и пределы значений
+                                // оставить только один массив и упрстить добавление пунктов
+                                // унифицировать функцию inRange()
+
+{
     int pos= 0;
     char menu[4][16]= {"Target temp  (1)", "Tolerance    (2)", "Measure rate (3)", "P-save mode  (4)"};
 	int values[4]= {targetTemp, Tolerance, measureRate, (BIT_READ(progFlags, ECONOMY))};
@@ -246,20 +256,21 @@ int main(void)
     
     ///инициализация АЦП///
     ADMUX |= 1<<REFS0; // выбрать источник опорного напряжения - вход AVCC
-    //ADCSRB |= 5 << ADTS0; // выбрать режим срабатывания АЦП - по совпадению таймера 1 с регистром B
-    ADCSRA |= 6 << ADPS0; // выбрать рабочую частоту (предделителя) - F_CPU/ADPS = 8000000/64=125kHz
+    ADCSRB |= 3 << ADTS0; // выбрать режим срабатывания АЦП - по совпадению таймера 0 с регистром A
+    //ADCSRA |= 6 << ADPS0; // выбрать рабочую частоту (предделителя) - F_CPU/ADPS = 8000000/64=125kHz
     ADMUX |= 1 << ADLAR; // выравнивание результатов по левой стороне
-    //ADCSRA |= 1 << ADATE; // включить непрерывное преобразование
+    ADCSRA |= 1 << ADATE; // включить непрерывное преобразование
     ADCSRA |= 1 << ADIE; // разрешить прерывания АЦП
     ADCSRA |= 1 << ADEN; // разрешить работу АЦП
-    //DIDR0 |= 1 << ADC0D; // отключить цифровой вход ADC0D 
+    //DIDR0 |= 1 << ADC0D; // отключить цифровой вход ADC0D
+    
     //////////////////////////////////////////////////////////////////////////
     
-    ///инициализация таймера 1///
-    TCCR1B|= 1 << WGM13; // включить режим CTC - сброс счетчика по совпадению
-    OCR1A= measureRate;
-    TCCR1B |= 5 << CS10; // включить таймер 1 с предделителем 1024
-    TIMSK1 |= 1 << OCIE1A; // разрешить прерывание таймера по сравнению с регистром A
+    ///инициализация таймера 0///
+    TCCR0A|= 2 << WGM00; // включить режим CTC - сброс счетчика по совпадению
+    OCR0A= measureRate;
+    TCCR0B |= 4 << CS00; // включить таймер 1 с предделителем 256
+    TIMSK0 |= 1 << OCIE0A; // разрешить прерывание таймера по сравнению с регистром B
     //////////////////////////////////////////////////////////////////////////
     
     ///инициализация асинхронного таймера 2///
@@ -267,6 +278,8 @@ int main(void)
     ASSR|= (1 << AS2); // разрешить асинхронный режим
     TIMSK2 |= 1 << TOIE2; // разрешить прерывание таймера по переполнению
     //////////////////////////////////////////////////////////////////////////
+    
+    ADCSRA |= 1 << ADSC;
     
     sei();
     
@@ -299,8 +312,10 @@ int main(void)
         //////////////////////////////////////////////////////////////////////////
         // задача : выключать подсветку по истечении таймаута, засыпать
         //////////////////////////////////////////////////////////////////////////
-        if(BIT_READ(progFlags, INACTIVE)){ // ???? ?? ???????
-            if(BIT_READ(progFlags, LCD_ON)){ // ???? ????????? ????????
+        if(BIT_READ(progFlags, INACTIVE))
+        {
+            if(BIT_READ(progFlags, LCD_ON))
+            {
                 BIT_OFF(progFlags, LCD_ON);
                 LCD_turnOff();
             }
@@ -327,8 +342,8 @@ ISR(ADC_vect){                                                      //TODO: долж
     //////////////////////////////////////////////////////////////////////////
     // задача : проверять значение датчика и управлять нагрузкой
     //////////////////////////////////////////////////////////////////////////
-    temperatureValue= BYTE_TO_TEMP(ADCH);
-    if (temperatureValue >= targetTemp + Tolerance)
+    temperatureValue= BYTE_TO_TEMP((ADCH << 2));                           //TODO: убрать вычисление из обработчика
+    if (temperatureValue >= (targetTemp + Tolerance))
     {
         turnOnCooler(); // включить охладитель
     }
@@ -348,8 +363,7 @@ ISR(TIMER2_OVF_vect){                                               //TODO: долж
     return;
 }
 
-ISR(TIMER1_COMPA_vect){                                             //TODO: должен будить процессор в режиме P-save
-    ADCSRA |= 1 << ADSC;
+ISR(TIMER0_COMPA_vect){                                             //TODO: должен будить процессор в режиме P-save
     return;
 }
 
