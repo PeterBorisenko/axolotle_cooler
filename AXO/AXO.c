@@ -27,6 +27,7 @@
 #define MIN(a,b) ((a)<(b)?(a):(b))
 #define MAX(a,b) ((a)>(b)?(a):(b))
 #define CONSTRAIN(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
+#define CIRCLE(amt, low, high) ((amt)<(low)?(high):((amt)>(high)?(low):(amt)))
 #define ROUND(x) ((x)>=0?(long)((x)+0.5):(long)((x)-0.5))
 
 #define BYTE_TO_VOLTS(x) ((x * 5.0)/256.0)
@@ -125,7 +126,7 @@ void LCD_turnOff()
 void LCD_DisplayAll()
 {   
 	LCD_Write("TEMP :", 0, 0);
-    LCD_Write((uint8_t)temperatureValue, 0, 8);
+    LCD_Write(temperatureValue, 0, 8);
     if (BIT_READ(progFlags, COOLING))
     {
         LCD_Write("COOLING ", 1, 0);
@@ -139,11 +140,30 @@ inline void menuStop()
     LCD_DisplayAll();
 }
 
+inline int inRange(int pos, int value)
+{
+    switch (pos)
+    {
+    case 1:
+        value= CONSTRAIN(value, MIN_TEMP, MAX_TEMP);
+        break;
+    case 2:
+        value= CONSTRAIN(value, MIN_TOL, MAX_TOL);
+        break;
+    case 3:
+        value= CIRCLE(value, 0, 1023);
+        break;
+    case 4:
+        value= CONSTRAIN(value, 0, 1);
+        break;
+    }
+}
+
 void menuRun()
 {   
     int pos= 0;
     char menu[4][16]= {"Target temp  (1)", "Tolerance    (2)", "Measure rate (3)", "P-save mode  (4)"};
-	uint8_t values[4]= {targetTemp, Tolerance, measureRate, (BIT_READ(progFlags, ECONOMY))};
+	int values[4]= {targetTemp, Tolerance, measureRate, (BIT_READ(progFlags, ECONOMY))};
     LCD_Clear();
     while (1){
         if (!BIT_READ(CONTROL_PORT, BUTTON_OK)){
@@ -155,36 +175,20 @@ void menuRun()
                 if (!BIT_READ(CONTROL_PORT, BUTTON_P))
                 {
                     BIT_OFF(progFlags, INACTIVE);
-                    values[pos]++;
+                    //values[pos]++;
+                    values[pos]= inRange(pos, ++values[pos]);
                 }
                 if (!BIT_READ(CONTROL_PORT, BUTTON_M))
                 {
                     BIT_OFF(progFlags, INACTIVE);
-                    values[pos]--;
+                    //values[pos]--;
+                    values[pos]= inRange(pos, --values[pos]);
+
                 }
                 if (!BIT_READ(CONTROL_PORT, BUTTON_BACK)) break;
-                switch (pos)
-                {
-                case 1:
-                    if(value > MAX_TEMP) value= MIN_TEMP;
-                    if(value < MIN_TEMP) value= MAX_TEMP;
-                	break;
-                case 2:
-                    if(value > MAX_TOL) value= MIN_TOL;
-                    if(value < MIN_TOL) value= MAX_TOL;
-                	break;
-                case 3:
-                    if(value > 1023) value= 0;
-                    if(value < 0) value= 1023;
-                	break;
-                case 4:
-                    if(value > 1) value= 0;
-                    if(value < 0) value= 1;
-                	break;
-                }
                 if (!BIT_READ(CONTROL_PORT, BUTTON_OK)) {
                     if(pos!=3){
-                        values[pos]= value;
+                        values[pos]= (uint8_t)value;
                         break;
                     }
                     else{
@@ -199,15 +203,15 @@ void menuRun()
         {
             BIT_OFF(progFlags, INACTIVE);
             pos++;
+            pos= CIRCLE(pos, 0, 3);
         }
         if (!BIT_READ(CONTROL_PORT, BUTTON_M))
         {
             BIT_OFF(progFlags, INACTIVE);
             pos--;
+            pos= CIRCLE(pos, 0, 3);
         }
         if (!BIT_READ(CONTROL_PORT, BUTTON_BACK)) break;
-        if(pos > 3) pos= 0;
-        if(pos < 0) pos= 3;
         if(BIT_READ(progFlags, INACTIVE)) break;
     }
     BIT_OFF(progFlags, MENU_ON);
@@ -338,9 +342,9 @@ ISR(TIMER2_OVF_vect){                                               //TODO: долж
     runSeconds++;
     if (runSeconds==timeOut)
     {
+        runSeconds= 0; // сбрасываем счетчик секунд
         BIT_ON(progFlags, INACTIVE);
     }
-    runSeconds= 0; // сбрасываем счетчик секунд
     return;
 }
 
