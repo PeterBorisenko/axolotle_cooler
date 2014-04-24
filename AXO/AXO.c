@@ -114,15 +114,15 @@ void LCD_Write(uint8_t data, uint8_t posY, uint8_t posX )
 
 void LCD_turnOn() 
 {
-	BIT_OFF(CONTROL_PORT, LCD_LED); // ????????? ?????????
+	BIT_ON(CONTROL_PORT, LCD_LED);
 }
 
 void LCD_turnOff() 
 {
-	BIT_ON(CONTROL_PORT, LCD_LED); // включить подсветку дисплея
+	BIT_OFF(CONTROL_PORT, LCD_LED);
 }
 
-void LCD_DisplayAll() 
+void LCD_DisplayAll()
 {   
 	LCD_Write("TEMP :", 0, 0);
     LCD_Write((uint8_t)temperatureValue, 0, 8);
@@ -140,7 +140,8 @@ inline void menuStop()
 }
 
 void menuRun()
-{   int pos= 0;
+{   
+    int pos= 0;
     char menu[4][16]= {"Target temp  (1)", "Tolerance    (2)", "Measure rate (3)", "P-save mode  (4)"};
 	uint8_t values[4]= {targetTemp, Tolerance, measureRate, (BIT_READ(progFlags, ECONOMY))};
     LCD_Clear();
@@ -268,7 +269,6 @@ int main(void)
     ///главный цикл///
     while(1)
     {
-
         //////////////////////////////////////////////////////////////////////////
         // задача : включать подсветку если нажата какая-либо кнопка
         //////////////////////////////////////////////////////////////////////////
