@@ -9,61 +9,15 @@
 #define BAUD 115200UL
 #define BAUD_DIVIDER ((F_CPU/(BAUD*8))-1)
 
-///константы///
-#define MAX_TEMP 20.0
-#define MIN_TEMP 15.0
-#define MAX_TOL 1.0
-#define MIN_TOL 0.0
-
-///макросы///
-#define BIT_ON(x,y) x|=(1<<y)
-#define BIT_OFF(x,y) x&=~(1<<y)
-#define BIT_READ(x,y) (((x)>>(y))&0x01)
-#define BIT_WRITE(x,y,z) ((z)?(BIT_ON(x,y)):(BIT_OFF(x,y)))
-
-#define HI(x) (x>>8)
-#define LO(x) (x^0xFF)
-
-#define MIN(a,b) ((a)<(b)?(a):(b))
-#define MAX(a,b) ((a)>(b)?(a):(b))
-#define CONSTRAIN(amt,low,high) ((amt)<(low)?(low):((amt)>(high)?(high):(amt)))
-#define CIRCLE(amt, low, high) ((amt)<(low)?(high):((amt)>(high)?(low):(amt)))
-#define ROUND(x) ((x)>=0?(long)((x)+0.5):(long)((x)-0.5))
-
 #define BYTE_TO_VOLTS(x) ((x * 5.0)/1024)
 #define BYTE_TO_MILLIVOLTS(x) ((x * 5000.0)/1024)
 #define BYTE_TO_TEMP(x) (x * 0.19) // оригинальная формула, специфичная для датчика TMP036: T= (Vin(mV) - 500)/10
 
-///порт B///
-#define LCD_REG DDRB
-#define LCD_PORT PORTB
-#define LCD_D0 PINB0
-#define LCD_D1 PINB1
-#define LCD_D2 PINB2
-#define LCD_D3 PINB3
-#define LCD_EN PINB4
-#define LCD_RS PINB5
-///порт C///
-#define SENSOR_REG DDRC
-#define TEMP_SENSOR PINC0
-///порт D///
-#define CONTROL_REG DDRD
-#define CONTROL_PORT PORTD
-#define LCD_LED PIND7
-#define LOAD PIND6
-#define BUTTON_P PIND5
-#define BUTTON_M PIND4
-#define BUTTON_OK PIND3
-#define BUTTON_BACK PIND2
-///флаги///
-#define LCD_ON 0
-#define MENU_ON 1
-#define ECONOMY 2
-#define COOLING 3
-#define INACTIVE 4
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include "Defines.h"
+#include "LCD.h"
 
 ///глобальные переменные///
 volatile static uint8_t runSeconds;
@@ -107,36 +61,14 @@ void turnOffSleep()
     //BIT_OFF(SMCR, SM0);
 }
 
-void LCD_Clear()
-{
-    //TODO: определить
-}
-
-void LCD_Write(uint8_t data, uint8_t posY, uint8_t posX ) 
-{
-    cli();
-	//TODO: определить
-    sei();
-}
-
-void LCD_turnOn() 
-{
-	BIT_ON(CONTROL_PORT, LCD_LED);
-}
-
-void LCD_turnOff() 
-{
-	BIT_OFF(CONTROL_PORT, LCD_LED);
-}
-
 void LCD_DisplayAll()
 {   
 	LCD_Write("TEMP :", 0, 0);
-    LCD_Write(temperatureValue, 0, 8);
+    LCD_Write((char)temperatureValue, 0, 8);
     if (BIT_READ(progFlags, COOLING))
     {
         LCD_Write("COOLING ", 1, 0);
-        LCD_Write((uint8_t)((temperatureValue - targetTemp)/Tolerance)*100, 1, 8);
+        LCD_Write((char)((temperatureValue - targetTemp)/Tolerance)*100, 1, 8);
     }
 }
 
@@ -247,7 +179,6 @@ int main(void)
     //////////////////////////////////////////////////////////////////////////
     
     ///инициализация портов///
-    LCD_REG= (1 << LCD_D0)|(1 << LCD_D1)|(1 << LCD_D2)|(1 << LCD_D3)|(1 << LCD_EN)|(1 << LCD_RS); // LCD на выход
     SENSOR_REG&= ~(1 << TEMP_SENSOR); // термодатчик на вход
     CONTROL_REG= (1 << LCD_LED)|(1 << LOAD); // управление подсветкой экрана и нагрузкой на выход
     CONTROL_REG&= ~(1 << BUTTON_M) & ~(1 << BUTTON_P) & ~(1 << BUTTON_OK) & ~(1 << BUTTON_BACK); // кнопки на вход
@@ -279,6 +210,8 @@ int main(void)
     TIMSK2 |= 1 << TOIE2; // разрешить прерывание таймера по переполнению
     //////////////////////////////////////////////////////////////////////////
     
+    LCD_Init();
+
     ADCSRA |= 1 << ADSC;
     
     sei();

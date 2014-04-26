@@ -36,7 +36,8 @@ SUBDIRS :=
 
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS +=  \
-../AXO.c
+../AXO.c \
+../LCD.c
 
 
 PREPROCESSING_SRCS += 
@@ -46,16 +47,20 @@ ASM_SRCS +=
 
 
 OBJS +=  \
-AXO.o
+AXO.o \
+LCD.o
 
 OBJS_AS_ARGS +=  \
-AXO.o
+AXO.o \
+LCD.o
 
 C_DEPS +=  \
-AXO.d
+AXO.d \
+LCD.d
 
 C_DEPS_AS_ARGS +=  \
-AXO.d
+AXO.d \
+LCD.d
 
 OUTPUT_FILE_PATH +=AXO.elf
 
@@ -68,6 +73,8 @@ OUTPUT_FILE_DEP:= ./makedep.mk
 LIB_DEP+= 
 
 # AVR32/GNU C Compiler
+
+
 
 
 
