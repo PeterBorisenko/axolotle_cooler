@@ -18,7 +18,7 @@
 #include <avr/interrupt.h>
 //#include "LiquidCrystal.h"
 #include "Defines.h"
-//#include "LCD.h"
+#include "LCD.h"
 
 ///глобальные переменные///
 volatile static uint8_t runSeconds;
@@ -64,13 +64,13 @@ void turnOffSleep()
 
 void LCD_DisplayAll()
 {   
-// 	LCD_Write("TEMP :", 0, 0);
-//     LCD_Write((char)temperatureValue, 0, 8);
-//     if (BIT_READ(progFlags, COOLING))
-//     {
-//         LCD_Write("COOLING ", 1, 0);
-//         LCD_Write((char)((temperatureValue - targetTemp)/Tolerance)*100, 1, 8);
-//     }
+	LCD_Write("TEMP :", 0, 0);
+    LCD_Write((char)temperatureValue, 0, 8);
+    if (BIT_READ(progFlags, COOLING))
+    {
+        LCD_Write("COOLING ", 1, 0);
+        LCD_Write((char)((temperatureValue - targetTemp)/Tolerance)*100, 1, 8);
+    }
 }
 
 inline void menuStop()
@@ -108,12 +108,12 @@ void menuRun()              //TODO: определить пункты меню через структуры, соде
     char menu[4][16]= {"Target temp  (1)", "Tolerance    (2)", "Measure rate (3)", "P-save mode  (4)"};
 	int values[4]= {targetTemp, Tolerance, measureRate, (BIT_READ(progFlags, ECONOMY))};
     LCD_Clear();
-    while (1){
+    while ((BIT_READ(progFlags, INACTIVE))||(!BIT_READ(CONTROL_PORT, BUTTON_BACK))){
         if (!BIT_READ(CONTROL_PORT, BUTTON_OK)){
             BIT_OFF(progFlags, INACTIVE);
             int value= values[pos];
-            while(1){
-                LCD_Write(values[pos],1,0);
+            while((BIT_READ(progFlags, INACTIVE))||(!BIT_READ(CONTROL_PORT, BUTTON_BACK))){
+                //LCD_Write(values[pos],1,0);
                 if (!BIT_READ(CONTROL_PORT, BUTTON_P))
                 {
                     BIT_OFF(progFlags, INACTIVE);
@@ -127,7 +127,6 @@ void menuRun()              //TODO: определить пункты меню через структуры, соде
                     values[pos]= inRange(pos, --values[pos]);
 
                 }
-                if (!BIT_READ(CONTROL_PORT, BUTTON_BACK)) break;
                 if (!BIT_READ(CONTROL_PORT, BUTTON_OK)) {
                     if(pos!=3){
                         values[pos]= (uint8_t)value;
@@ -135,9 +134,9 @@ void menuRun()              //TODO: определить пункты меню через структуры, соде
                     }
                     else{
                         BIT_WRITE(progFlags, ECONOMY, value);
+                        break;
                     }          
-                }
-                if(BIT_READ(progFlags, INACTIVE)) break;                    
+                }                  
             }
         }
         LCD_Write(menu[pos],0,0);
@@ -154,8 +153,6 @@ void menuRun()              //TODO: определить пункты меню через структуры, соде
             pos--;
             pos= CIRCLE(pos, 0, 3);
         }
-        if (!BIT_READ(CONTROL_PORT, BUTTON_BACK)) break;
-        if(BIT_READ(progFlags, INACTIVE)) break;
     }
     BIT_OFF(progFlags, MENU_ON);
     BIT_OFF(progFlags, INACTIVE);
@@ -211,7 +208,7 @@ int main(void)
     TIMSK2 |= 1 << TOIE2; // разрешить прерывание таймера по переполнению
     //////////////////////////////////////////////////////////////////////////
     
-    //LCD_Init();
+    LCD_Init();
 
     BIT_WRITE(PRR, PRTWI, 1); // отключить питание TWI дл€ уменьшени€ энергопотреблени€
     BIT_WRITE(PRR, PRTIM1, 1); // отключить питание таймера 1 дл€ уменьшени€ энергопотреблени€
@@ -231,7 +228,7 @@ int main(void)
         {
             BIT_OFF(progFlags, INACTIVE); // выйти из режима неактивности
             BIT_ON(progFlags, LCD_ON);
-            //LCD_turnOn();
+            LCD_turnOn();
         }
         //////////////////////////////////////////////////////////////////////////
         // задача : входить в меню если нажата кнопка OK/MENU
@@ -242,7 +239,7 @@ int main(void)
             if (!BIT_READ(progFlags, LCD_ON))
             {
                 BIT_ON(progFlags, LCD_ON); // включить подсветку диспле€
-                //LCD_turnOn();
+                LCD_turnOn();
             }
             BIT_ON(progFlags, MENU_ON); // включить меню
             menuRun(); // обработка команд меню
@@ -255,7 +252,7 @@ int main(void)
             if(BIT_READ(progFlags, LCD_ON))
             {
                 BIT_OFF(progFlags, LCD_ON);
-                //LCD_turnOff();
+                LCD_turnOff();
             }
             else if (BIT_READ(progFlags, ECONOMY))
             {
@@ -267,7 +264,7 @@ int main(void)
         //////////////////////////////////////////////////////////////////////////
         if (BIT_READ(progFlags, LCD_ON))
         {
-            //LCD_DisplayAll();
+            LCD_DisplayAll();
         }
     }
 }
@@ -307,5 +304,5 @@ ISR(TIMER0_COMPA_vect){                                             //TODO: долж
 ISR(INT1_vect){                                                     //TODO: должен будить процессор в режиме P-save
     turnOffSleep();
     BIT_ON(progFlags, LCD_ON);
-    //LCD_turnOn();
+    LCD_turnOn();
 }

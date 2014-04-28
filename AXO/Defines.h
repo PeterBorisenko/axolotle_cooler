@@ -31,17 +31,21 @@
 #define ROUND(x) ((x)>=0?(long)((x)+0.5):(long)((x)-0.5))
 
 ///порт B///
-#define LCD_REG DDRB
-#define LCD_PORT PORTB
+#define LCD_DREG DDRB
+#define LCD_DPORT PORTB
 #define LCD_D0 PINB0
 #define LCD_D1 PINB1
 #define LCD_D2 PINB2
 #define LCD_D3 PINB3
-#define LCD_EN PINB4
-#define LCD_RS PINB5
 ///порт C///
 #define SENSOR_REG DDRC
 #define TEMP_SENSOR PINC0
+
+#define LCD_CREG DDRC
+#define LCD_CPORT PORTC
+#define LCD_EN PINC3
+#define LCD_RW PINC2
+#define LCD_RS PINC1
 ///порт D///
 #define CONTROL_REG DDRD
 #define CONTROL_PORT PORTD

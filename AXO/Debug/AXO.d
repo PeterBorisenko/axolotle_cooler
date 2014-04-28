@@ -10,7 +10,9 @@ AXO.d AXO.o AXO.o: .././AXO.c \
   d:/winavr-20100110/lib/gcc/../../avr/include/avr/fuse.h \
   d:/winavr-20100110/lib/gcc/../../avr/include/avr/lock.h \
   d:/winavr-20100110/lib/gcc/../../avr/include/avr/interrupt.h \
-  .././Defines.h
+  .././Defines.h .././LCD.h \
+  d:/winavr-20100110/lib/gcc/../../avr/include/util/delay.h \
+  d:/winavr-20100110/lib/gcc/../../avr/include/util/delay_basic.h
 
 d:/winavr-20100110/lib/gcc/../../avr/include/avr/io.h:
 
@@ -35,3 +37,9 @@ d:/winavr-20100110/lib/gcc/../../avr/include/avr/lock.h:
 d:/winavr-20100110/lib/gcc/../../avr/include/avr/interrupt.h:
 
 .././Defines.h:
+
+.././LCD.h:
+
+d:/winavr-20100110/lib/gcc/../../avr/include/util/delay.h:
+
+d:/winavr-20100110/lib/gcc/../../avr/include/util/delay_basic.h:

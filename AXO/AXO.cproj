@@ -125,9 +125,15 @@
     <Compile Include="LiquidCrystal.h">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="WString.h">
+      <SubType>compile</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <None Include="LiquidCrystal.c">
+      <SubType>compile</SubType>
+    </None>
+    <None Include="WString.cpp">
       <SubType>compile</SubType>
     </None>
   </ItemGroup>

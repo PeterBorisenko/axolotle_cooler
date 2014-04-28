@@ -39,37 +39,20 @@
 // AG - адрес в памяти CGRAM
 // АD — адрес в памяти DDRAM
 
-// Запись:
-// 
-// E=1
-// Пауза
-// Выставили в порт старшую тетраду
-// E=0
-// Пауза
-// Е=1
-// Пауза
-// Выставили в порт младшую тетраду
-// Е=0
-// 
-// 
-// Чтение
-// 
-// E=1
-// Пауза
-// Читаем из порта старшую тетраду
-// Е=0
-// Пауза
-// Е=1
-// Пауза
-// Читаем из порта младшую тетраду
-// Е=0
-
-#ifndef LCD_REG
-#define LCD_REG DDRB
+#ifndef LCD_DREG
+#define LCD_DREG DDRB
 #endif
 
-#ifndef LCD_PORT
-#define LCD_PORT PORTB
+#ifndef LCD_DPORT
+#define LCD_DPORT PORTB
+#endif
+
+#ifndef LCD_CREG
+#define LCD_CREG DDRC
+#endif
+
+#ifndef LCD_CPORT
+#define LCD_CPORT PORTC
 #endif
 
 #ifndef LCD_IN
@@ -93,13 +76,23 @@
 #endif
 
 #ifndef LCD_EN
-#define LCD_EN PINB4
+#define LCD_EN PINC3
 #endif
 
 #ifndef LCD_RS
-#define LCD_RS PINB5
+#define LCD_RS PINC1
 #endif
 
+#ifndef LCD_RW
+#define LCD_RW PINC2
+#endif
+
+ #define control BIT_OFF(LCD_CPORT,LCD_RS)
+ #define data BIT_ON(LCD_CPORT, LCD_RS)
+ #define enable BIT_ON(LCD_CPORT, LCD_EN)
+ #define disable BIT_OFF(LCD_CPORT, LCD_EN)
+ #define readlcd BIT_ON(LCD_CPORT, LCD_RW)
+ #define writelcd BIT_OFF(LCD_CPORT, LCD_RW)
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
