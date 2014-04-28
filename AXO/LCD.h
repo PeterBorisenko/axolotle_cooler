@@ -103,6 +103,7 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <util/delay.h>
 #include "Defines.h"
 
 void LCD_Clear();
@@ -111,4 +112,5 @@ void LCD_turnOn();
 void LCD_turnOff();
 void LCD_Init();
 void LCD_SetCursor();
+int LCD_Busy();
 #endif /* LCD_H_ */
