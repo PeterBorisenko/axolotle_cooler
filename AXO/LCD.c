@@ -2,34 +2,34 @@
  * LCD.c
  *
  * Created: 4/25/2014 10:06:24 PM
- *  Author: Disgust
+ *  Author: Peter
  */ 
  #include "LCD.h"
 
-int LCD_Busy() //TODO: для чтения нужны ножка RW
+int LCD_Busy()
 {
     uint8_t input= 0;
     readlcd;
-    LCD_DREG&= ~(1 << LCD_D0)&~(1 << LCD_D1)&~(1 << LCD_D2)&~(1 << LCD_D3);
-    LCD_DPORT|= (1 << LCD_D0)|(1 << LCD_D1)|(1 << LCD_D2)|(1 << LCD_D3);
+    LCD_DREG&= ~(1 << LCD_D0)&~(1 << LCD_D1)&~(1 << LCD_D2)&~(1 << LCD_D3); // переключить пины на выход
+    LCD_DPORT&= ~(1 << LCD_D0)&~(1 << LCD_D1)&~(1 << LCD_D2)&~(1 << LCD_D3); // очистить выход
     enable;
-    _delay_loop_1(14);
+    _delay_loop_1(20);
     disable;
     input= LCD_IN << 4;
     enable;
-    _delay_loop_1(14);
+    _delay_loop_1(20);
     disable;
     input|= LCD_IN;
-    if(BIT_READ(input, 7))
-    {
-        LCD_DPORT&= ~(1 << LCD_D0)&~(1 << LCD_D1)&~(1 << LCD_D2)&~(1 << LCD_D3);
-        LCD_DREG|= (1 << LCD_D0)|(1 << LCD_D1)|(1 << LCD_D2)|(1 << LCD_D3);
-        writelcd;
-        return 1;
-    }
-    LCD_DPORT&= ~(1 << LCD_D0)&~(1 << LCD_D1)&~(1 << LCD_D2)&~(1 << LCD_D3);
-    LCD_DREG|= (1 << LCD_D0)|(1 << LCD_D1)|(1 << LCD_D2)|(1 << LCD_D3);
-    writelcd;
+//     if(BIT_READ(input, 7))
+//     {
+//         LCD_DPORT&= ~(1 << LCD_D0)&~(1 << LCD_D1)&~(1 << LCD_D2)&~(1 << LCD_D3);
+//         LCD_DREG|= (1 << LCD_D0)|(1 << LCD_D1)|(1 << LCD_D2)|(1 << LCD_D3);
+//         writelcd;
+//         return 1;
+//     }
+//     LCD_DPORT&= ~(1 << LCD_D0)&~(1 << LCD_D1)&~(1 << LCD_D2)&~(1 << LCD_D3);
+//     LCD_DREG|= (1 << LCD_D0)|(1 << LCD_D1)|(1 << LCD_D2)|(1 << LCD_D3);
+     writelcd;
     return 0;
 }
 
@@ -43,6 +43,7 @@ int LCD_Busy() //TODO: для чтения нужны ножка RW
     BIT_WRITE(LCD_DPORT, LCD_D1, 0);
     BIT_WRITE(LCD_DPORT, LCD_D0, 0);
     disable;
+    _delay_loop_1(10);
     enable;
     BIT_WRITE(LCD_DPORT, LCD_D3, 0);
     BIT_WRITE(LCD_DPORT, LCD_D2, 0);
@@ -62,6 +63,7 @@ int LCD_Busy() //TODO: для чтения нужны ножка RW
     BIT_WRITE(LCD_DPORT, LCD_D1, 1);
     BIT_WRITE(LCD_DPORT, LCD_D0, 0);
     disable;
+    _delay_loop_1(10);
     enable;
     BIT_WRITE(LCD_DPORT, LCD_D3, 1);
     BIT_WRITE(LCD_DPORT, LCD_D2, 0);
@@ -75,89 +77,102 @@ int LCD_Busy() //TODO: для чтения нужны ножка RW
     BIT_WRITE(LCD_DPORT, LCD_D1, 0);
     BIT_WRITE(LCD_DPORT, LCD_D0, 0);
     disable;
+    _delay_loop_1(10);
     enable;
     BIT_WRITE(LCD_DPORT, LCD_D3, 0);
     BIT_WRITE(LCD_DPORT, LCD_D2, 1);
     BIT_WRITE(LCD_DPORT, LCD_D1, 1);
     BIT_WRITE(LCD_DPORT, LCD_D0, 0);
     disable;
-    void LCD_Clear();
+    LCD_Clear();
  }
 
-void LCD_SetCursor(int row, int col)
+void LCD_SetCursor(uint8_t row, uint8_t col)
 {
-    uint8_t addr;
+    uint8_t addr= (row * LCD_LENGTH + col); // конвертация номера строки и столбца в адрес
     while(LCD_Busy());
-    control; // переместрить курсор на адрес 0 в DDRAM
-    enable;                                           //TODO: конвертация номера строки и столбца в адрес
+    control; 
+    enable;                                           
     BIT_WRITE(LCD_DPORT, LCD_D3, 1);
     BIT_WRITE(LCD_DPORT, LCD_D2, (addr >> 6)&0x01);
     BIT_WRITE(LCD_DPORT, LCD_D1, (addr >> 5)&0x01);
     BIT_WRITE(LCD_DPORT, LCD_D0, (addr >> 4)&0x01);
     disable;
+    _delay_loop_1(10);
     enable;
     BIT_WRITE(LCD_DPORT, LCD_D3, (addr >> 3)&0x01);
     BIT_WRITE(LCD_DPORT, LCD_D2, (addr >> 2)&0x01);
     BIT_WRITE(LCD_DPORT, LCD_D1, (addr >> 1)&0x01);
-    BIT_WRITE(LCD_DPORT, LCD_D0, (addr >> 0)&0x01);
+    BIT_WRITE(LCD_DPORT, LCD_D0, addr&0x01);
     disable;
 }
 
- void LCD_Write(char *data, uint8_t posY, uint8_t posX ) //TODO: доопределить, учесть конветацию чисел в символы
- {
-     LCD_SetCursor(posY, posX);
-     cli();
-     while(LCD_Busy());
-     control;
-     enable;
-     BIT_WRITE(LCD_DPORT, LCD_D3, 0);
-     BIT_WRITE(LCD_DPORT, LCD_D2, 0);
-     BIT_WRITE(LCD_DPORT, LCD_D1, 1);
-     BIT_WRITE(LCD_DPORT, LCD_D0, 0);
-     disable;
-     enable;
-     BIT_WRITE(LCD_DPORT, LCD_D3, 0);
-     BIT_WRITE(LCD_DPORT, LCD_D2, 0);
-     BIT_WRITE(LCD_DPORT, LCD_D1, 1);
-     BIT_WRITE(LCD_DPORT, LCD_D0, 1);
-     disable;
-     sei();
- }
+void LCD_Write(char * bytes, uint8_t sz, uint8_t posY, uint8_t posX )
+{
+    LCD_SetCursor(posY, posX);
+    
+    for (int i = sz; i > 0; i--)
+    {
+        while(LCD_Busy());
+        cli();
+        data;
+        enable;
+        BIT_WRITE(LCD_DPORT, LCD_D3, (*bytes >> 7)&0x01);
+        BIT_WRITE(LCD_DPORT, LCD_D2, (*bytes >> 6)&0x01);
+        BIT_WRITE(LCD_DPORT, LCD_D1, (*bytes >> 5)&0x01);
+        BIT_WRITE(LCD_DPORT, LCD_D0, (*bytes >> 4)&0x01);
+        disable;
+        _delay_loop_1(10);
+        enable;
+        BIT_WRITE(LCD_DPORT, LCD_D3, (*bytes >> 3)&0x01);
+        BIT_WRITE(LCD_DPORT, LCD_D2, (*bytes >> 2)&0x01);
+        BIT_WRITE(LCD_DPORT, LCD_D1, (*bytes >> 1)&0x01);
+        BIT_WRITE(LCD_DPORT, LCD_D0, *bytes&0x01);
+        disable;
+        sei();
+        bytes++;
+    }
+    
+}
 
- void LCD_turnOn()
- {
-     BIT_ON(CONTROL_PORT, LCD_LED);
-     while(LCD_Busy());
-     control; // включить экран, курсора нет
-     enable;
-     BIT_WRITE(LCD_DPORT, LCD_D3, 0);
-     BIT_WRITE(LCD_DPORT, LCD_D2, 0);
-     BIT_WRITE(LCD_DPORT, LCD_D1, 0);
-     BIT_WRITE(LCD_DPORT, LCD_D0, 0);
-     disable;
-     enable;
-     BIT_WRITE(LCD_DPORT, LCD_D3, 1);
-     BIT_WRITE(LCD_DPORT, LCD_D2, 1);
-     BIT_WRITE(LCD_DPORT, LCD_D1, 0);
-     BIT_WRITE(LCD_DPORT, LCD_D0, 0);
-     disable;
- }
+void LCD_turnOn()
+{
+    BIT_ON(CONTROL_PORT, LCD_LED);
+    while(LCD_Busy());
+    control; // включить экран, курсора нет
+    enable;
+    BIT_WRITE(LCD_DPORT, LCD_D3, 0);
+    BIT_WRITE(LCD_DPORT, LCD_D2, 0);
+    BIT_WRITE(LCD_DPORT, LCD_D1, 0);
+    BIT_WRITE(LCD_DPORT, LCD_D0, 0);
+    disable;
+    _delay_loop_1(10);
+    enable;
+    BIT_WRITE(LCD_DPORT, LCD_D3, 1);
+    BIT_WRITE(LCD_DPORT, LCD_D2, 1);
+    BIT_WRITE(LCD_DPORT, LCD_D1, 1);
+    BIT_WRITE(LCD_DPORT, LCD_D0, 0);
+    disable;
+    LCD_SetCursor(0, 0);
+}
 
- void LCD_turnOff()
- {
-     BIT_OFF(CONTROL_PORT, LCD_LED);
-     while(LCD_Busy());
-     control; // выключить экран, курсора нет
-     enable;
-     BIT_WRITE(LCD_DPORT, LCD_D3, 0);
-     BIT_WRITE(LCD_DPORT, LCD_D2, 0);
-     BIT_WRITE(LCD_DPORT, LCD_D1, 0);
-     BIT_WRITE(LCD_DPORT, LCD_D0, 0);
-     disable;
-     enable;
-     BIT_WRITE(LCD_DPORT, LCD_D3, 1);
-     BIT_WRITE(LCD_DPORT, LCD_D2, 0);
-     BIT_WRITE(LCD_DPORT, LCD_D1, 0);
-     BIT_WRITE(LCD_DPORT, LCD_D0, 0);
-     disable;
- }
+void LCD_turnOff()
+{
+    BIT_OFF(CONTROL_PORT, LCD_LED);
+    while(LCD_Busy());
+    control; // выключить экран, курсора нет
+    enable;
+    BIT_WRITE(LCD_DPORT, LCD_D3, 0);
+    BIT_WRITE(LCD_DPORT, LCD_D2, 0);
+    BIT_WRITE(LCD_DPORT, LCD_D1, 0);
+    BIT_WRITE(LCD_DPORT, LCD_D0, 0);
+    disable;
+    _delay_loop_1(10);
+    enable;
+    BIT_WRITE(LCD_DPORT, LCD_D3, 1);
+    BIT_WRITE(LCD_DPORT, LCD_D2, 0);
+    BIT_WRITE(LCD_DPORT, LCD_D1, 1);
+    BIT_WRITE(LCD_DPORT, LCD_D0, 0);
+    disable;
+    LCD_DPORT&= ~(1 << LCD_D0)&~(1 << LCD_D1)&~(1 << LCD_D2)&~(1 << LCD_D3);
+}

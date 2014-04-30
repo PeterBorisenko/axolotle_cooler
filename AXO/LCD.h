@@ -2,7 +2,7 @@
  * LCD.h
  *
  * Created: 4/25/2014 10:02:37 PM
- *  Author: Disgust
+ *  Author: Peter
  */ 
 
 
@@ -38,6 +38,14 @@
 // F - размер символа 0 Ч 5х8 точек. 1 Ч 5х10 точек (встречаетс€ крайне редко)
 // AG - адрес в пам€ти CGRAM
 // јD Ч адрес в пам€ти DDRAM
+
+#ifndef LCD_LENGTH
+#define LCD_LENGTH 16
+#endif
+
+#ifndef LCD_WIDTH
+#define LCD_WIDTH 2
+#endif
 
 #ifndef LCD_DREG
 #define LCD_DREG DDRB
@@ -87,12 +95,12 @@
 #define LCD_RW PINC2
 #endif
 
- #define control BIT_OFF(LCD_CPORT,LCD_RS)
- #define data BIT_ON(LCD_CPORT, LCD_RS)
- #define enable BIT_ON(LCD_CPORT, LCD_EN)
- #define disable BIT_OFF(LCD_CPORT, LCD_EN)
- #define readlcd BIT_ON(LCD_CPORT, LCD_RW)
- #define writelcd BIT_OFF(LCD_CPORT, LCD_RW)
+ #define control (BIT_OFF(LCD_CPORT,LCD_RS))
+ #define data (BIT_ON(LCD_CPORT, LCD_RS))
+ #define enable (BIT_ON(LCD_CPORT, LCD_EN))
+ #define disable (BIT_OFF(LCD_CPORT, LCD_EN))
+ #define readlcd (BIT_ON(LCD_CPORT, LCD_RW))
+ #define writelcd (BIT_OFF(LCD_CPORT, LCD_RW))
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
@@ -100,10 +108,10 @@
 #include "Defines.h"
 
 void LCD_Clear();
-void LCD_Write(char*, uint8_t, uint8_t);
+void LCD_Write(char*, uint8_t, uint8_t, uint8_t);
 void LCD_turnOn();
 void LCD_turnOff();
 void LCD_Init();
-void LCD_SetCursor();
+void LCD_SetCursor(uint8_t, uint8_t);
 int LCD_Busy();
 #endif /* LCD_H_ */

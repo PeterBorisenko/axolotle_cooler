@@ -2,12 +2,14 @@
  * AXO.c
  *
  * Created: 4/21/2014 8:00:01 PM
- *  Author: Disgust
+ *  Author: Peter
  */ 
 
 #define F_CPU 8000000UL
 #define BAUD 115200UL
 #define BAUD_DIVIDER ((F_CPU/(BAUD*8))-1)
+#define LCD_LENGTH 16;
+#define LCD_WIDTH 2;
 
 #define BYTE_TO_VOLTS(x) ((x * 5.0)/1024)
 #define BYTE_TO_MILLIVOLTS(x) ((x * 5000.0)/1024)
@@ -16,13 +18,13 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
-//#include "LiquidCrystal.h"
 #include "Defines.h"
 #include "LCD.h"
 
+///глобальные константы///
+const uint8_t timeOut= 0x0A;
 ///глобальные переменные///
 volatile static uint8_t runSeconds;
-uint8_t timeOut= 0x0A;
 volatile static double temperatureValue;
 volatile static double targetTemp= 20.0;
 volatile static double Tolerance= 0.0;
@@ -48,28 +50,31 @@ inline static void turnOffCooler()
 }
 
 void turnOnSleep()
-//TODO: разрешить прерывание INT1
 {
+    //TODO: разрешить прерывание INT1
+    //TODO: отключить непрерывное преобразование АЦП
     //BIT_ON(PRR, PRADC); // режим работы во сне
     //BIT_ON(SMCR, SM0);
     //SMCR |= 1 << SE; // засыпает
 }
 
 void turnOffSleep()
-//TODO: запретить прерывание INT1
 {
+    //TODO: запретить прерывание INT1
+    //TODO: включить непрерывное преобразование АЦП
+    //TODO: 
     //BIT_OFF(PRR, PRADC);
     //BIT_OFF(SMCR, SM0);
 }
 
 void LCD_DisplayAll()
 {   
-	LCD_Write("TEMP :", 0, 0);
-    LCD_Write((char)temperatureValue, 0, 8);
+	LCD_Write("TEMP :", 6, 0, 0);
+    LCD_Write((char)temperatureValue, 1, 0, 8);
     if (BIT_READ(progFlags, COOLING))
     {
-        LCD_Write("COOLING ", 1, 0);
-        LCD_Write((char)((temperatureValue - targetTemp)/Tolerance)*100, 1, 8);
+        LCD_Write("COOLING ", 8, 1, 0);
+        LCD_Write((char)((temperatureValue - targetTemp)/Tolerance)*100, 1, 1, 8);
     }
 }
 
@@ -139,8 +144,8 @@ void menuRun()              //TODO: определить пункты меню через структуры, соде
                 }                  
             }
         }
-        LCD_Write(menu[pos],0,0);
-        LCD_Write(values[pos],1,0);
+        LCD_Write(menu[pos],16,0,0);
+        LCD_Write(values[pos],1,1,0);
         if (!BIT_READ(CONTROL_PORT, BUTTON_P))
         {
             BIT_OFF(progFlags, INACTIVE);
@@ -191,7 +196,7 @@ int main(void)
     ADCSRA |= 1 << ADATE; // включить непрерывное преобразование
     ADCSRA |= 1 << ADIE; // разрешить прерывания АЦП
     ADCSRA |= 1 << ADEN; // разрешить работу АЦП
-    //DIDR0 |= 1 << ADC0D; // отключить цифровой вход ADC0D
+    DIDR0 |= 1 << ADC0D; // отключить буффер цифрового входа ADC0D
     
     //////////////////////////////////////////////////////////////////////////
     
@@ -213,6 +218,7 @@ int main(void)
     BIT_WRITE(PRR, PRTWI, 1); // отключить питание TWI для уменьшения энергопотребления
     BIT_WRITE(PRR, PRTIM1, 1); // отключить питание таймера 1 для уменьшения энергопотребления
     BIT_WRITE(PRR, PRSPI, 1); // отключить питание SPI для уменьшения энергопотреблениЯ
+    BIT_WRITE(ACSR, ACD, 1); // отключить аналоговый компаратор
 
     ADCSRA |= 1 << ADSC;
 
@@ -298,6 +304,7 @@ ISR(TIMER2_OVF_vect){                                               //TODO: долж
 }
 
 ISR(TIMER0_COMPA_vect){                                             //TODO: должен будить процессор в режиме P-save
+    
     return;
 }
 
