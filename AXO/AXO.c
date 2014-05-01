@@ -18,6 +18,7 @@
 
 #include <avr/io.h>
 #include <avr/interrupt.h>
+#include <string.h>
 #include "Defines.h"
 #include "LCD.h"
 
@@ -29,15 +30,17 @@ volatile static double temperatureValue;
 volatile static double targetTemp= 20.0;
 volatile static double Tolerance= 0.0;
 volatile static uint8_t measureRate= 0x80; // поумолчанию - частота замера (F_CPU/1024)/2
+volatile char USART_buffer[8];
+volatile static int USART_index;
 uint8_t progFlags= 0b00000100;
 
-void turnOnFan() 
+inline static void turnOnFan() 
 {
 	BIT_ON(CONTROL_PORT, FAN);
 	BIT_ON(progFlags, FAN_ON);
 }
 
-void turnOffFan()
+inline static void turnOffFan()
 {
     BIT_OFF(CONTROL_PORT, FAN);
     BIT_OFF(progFlags, FAN_ON);
@@ -60,6 +63,14 @@ inline static void turnOffCooler()
 	    BIT_OFF(CONTROL_PORT, LOAD);
         BIT_OFF(progFlags, COOLING);
     }
+}
+
+inline static void sendData( volatile double a) 
+{
+    memcpy(&USART_buffer,&a, 8);
+    UDR0= *USART_buffer;
+    USART_index= 1;
+    //USART_buffer++;
 }
 
 void turnOnSleep()
@@ -290,11 +301,11 @@ int main(void)
 
 /// обработчики прерываний///
 
-ISR(ADC_vect){                                                      //TODO: должен будить процессор в режиме P-save
+ISR(ADC_vect){
     //////////////////////////////////////////////////////////////////////////
     // задача : проверять значение датчика и управлять нагрузкой
     //////////////////////////////////////////////////////////////////////////
-    temperatureValue= BYTE_TO_TEMP((ADCH << 2));                           //TODO: убрать вычисление из обработчика
+    temperatureValue= BYTE_TO_TEMP((ADCH << 2));
     if (temperatureValue >= (targetTemp + Tolerance))
     {
         turnOnCooler(); // включить охладитель
@@ -305,7 +316,14 @@ ISR(ADC_vect){                                                      //TODO: долж
     }
 }
 
-ISR(TIMER2_OVF_vect){                                               //TODO: должен будить процессор в режиме P-save
+
+
+ISR(TIMER2_OVF_vect){
+    //////////////////////////////////////////////////////////////////////////
+    // задача : считать секунды, отсылать данные в последовательный порт, 
+    // выставлять флаг неактивности
+    //////////////////////////////////////////////////////////////////////////
+    sendData(temperatureValue);
     runSeconds++;
     if (runSeconds==timeOut)
     {
@@ -318,13 +336,24 @@ ISR(TIMER2_OVF_vect){                                               //TODO: долж
     return;
 }
 
-ISR(TIMER0_COMPA_vect){                                             //TODO: должен будить процессор в режиме P-save
-    
+ISR(TIMER0_COMPA_vect){
     return;
 }
 
-ISR(INT1_vect){                                                     //TODO: должен будить процессор в режиме P-save
+ISR(INT1_vect){
+    //////////////////////////////////////////////////////////////////////////
+    // задача : выходить из сна
+    //////////////////////////////////////////////////////////////////////////
     turnOffSleep();
     BIT_ON(progFlags, LCD_ON);
     LCD_turnOn();
+}
+
+ISR(USART_UDRE_vect){
+    //////////////////////////////////////////////////////////////////////////
+    // задача : отдавать модулю УСАПП следующий байт сообщения
+    //////////////////////////////////////////////////////////////////////////
+    if(USART_index > 7) return;
+    UDR0= USART_buffer[USART_index];
+    USART_index++;
 }
