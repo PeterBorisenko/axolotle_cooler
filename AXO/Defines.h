@@ -55,12 +55,14 @@
 #define BUTTON_M PIND4
 #define BUTTON_OK PIND3
 #define BUTTON_BACK PIND2
+#define FAN PIND0
 ///флаги///
 #define LCD_ON 0
 #define MENU_ON 1
 #define ECONOMY 2
 #define COOLING 3
 #define INACTIVE 4
+#define FAN_ON 5
 
 
 

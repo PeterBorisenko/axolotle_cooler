@@ -31,10 +31,23 @@ volatile static double Tolerance= 0.0;
 volatile static uint8_t measureRate= 0x80; // поумолчанию - частота замера (F_CPU/1024)/2
 uint8_t progFlags= 0b00000100;
 
+void turnOnFan() 
+{
+	BIT_ON(CONTROL_PORT, FAN);
+	BIT_ON(progFlags, FAN_ON);
+}
+
+void turnOffFan()
+{
+    BIT_OFF(CONTROL_PORT, FAN);
+    BIT_OFF(progFlags, FAN_ON);
+}
+
 inline static void turnOnCooler() 
 {
     if(!BIT_READ(progFlags, COOLING))
-    {
+    {   
+        turnOnFan();
 	    BIT_ON(CONTROL_PORT, LOAD);
         BIT_ON(progFlags, COOLING);
     }
@@ -107,7 +120,6 @@ inline int inRange(int pos, int value)
 void menuRun()              //TODO: определить пункты меню через структуры, содержащие имя, значение и пределы значений
                                 // оставить только один массив и упрстить добавление пунктов
                                 // унифицировать функцию inRange()
-
 {
     int pos= 0;
     char menu[4][16]= {"Target temp  (1)", "Tolerance    (2)", "Measure rate (3)", "P-save mode  (4)"};
@@ -175,15 +187,15 @@ int main(void)
     BIT_WRITE(UCSR0C, UCSZ00, 1);    // ----||----
     BIT_WRITE(UCSR0C, USBS0, 0);  // 1 стоповый бит
     BIT_WRITE(UCSR0B, TXEN0, 1);  // передача разрешена
-    BIT_WRITE(UCSR0B, RXEN0, 1);  // прием разрешен
-    BIT_WRITE(UCSR0B, RXCIE0, 1); // прерывание приема разрешено
+    BIT_WRITE(UCSR0B, RXEN0, 0);  // прием запрещен
+    BIT_WRITE(UCSR0B, RXCIE0, 0); // прерывание приема запрещено
     BIT_WRITE(UCSR0B, TXCIE0, 1); // прерывание конца передачи разрешено
     BIT_WRITE(UCSR0B, UDRIE0, 0); // прерывание опустошения очереди передачи запрещено - оно разрешится при отправке
     //////////////////////////////////////////////////////////////////////////
     
     ///инициализация портов///
     SENSOR_REG&= ~(1 << TEMP_SENSOR); // термодатчик на вход
-    CONTROL_REG= (1 << LCD_LED)|(1 << LOAD); // управление подсветкой экрана и нагрузкой на выход
+    CONTROL_REG= (1 << LCD_LED)|(1 << LOAD)|(1<<FAN); // управление подсветкой экрана, нагрузкой и вентилятором на выход
     CONTROL_REG&= ~(1 << BUTTON_M) & ~(1 << BUTTON_P) & ~(1 << BUTTON_OK) & ~(1 << BUTTON_BACK); // кнопки на вход
     CONTROL_PORT= (1 << BUTTON_M)|(1 << BUTTON_OK)|(1 << BUTTON_P)|(1 << BUTTON_BACK); // подключить подтягивающие резисторы к кнопкам
     //////////////////////////////////////////////////////////////////////////
@@ -299,6 +311,9 @@ ISR(TIMER2_OVF_vect){                                               //TODO: долж
     {
         runSeconds= 0; // сбрасываем счетчик секунд
         BIT_ON(progFlags, INACTIVE);
+        if(BIT_READ(progFlags, FAN_ON)){
+            turnOffFan();
+        }
     }
     return;
 }
