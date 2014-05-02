@@ -113,6 +113,12 @@
     <Compile Include="AXO.c">
       <SubType>compile</SubType>
     </Compile>
+    <Compile Include="BIN2ASCII.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="d2c.h">
+      <SubType>compile</SubType>
+    </Compile>
     <Compile Include="Defines.h">
       <SubType>compile</SubType>
     </Compile>
@@ -120,6 +126,12 @@
       <SubType>compile</SubType>
     </Compile>
     <Compile Include="LCD.h">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="lcd_lib.c">
+      <SubType>compile</SubType>
+    </Compile>
+    <Compile Include="lcd_lib.h">
       <SubType>compile</SubType>
     </Compile>
   </ItemGroup>

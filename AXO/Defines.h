@@ -16,10 +16,10 @@
 #define MIN_TOL 0.0
 
 ///макросы///
-#define BIT_ON(x,y) x|=(1<<y)
+#define BIT_ON(x,y,z) x|=(z<<y)
 #define BIT_OFF(x,y) x&=~(1<<y)
 #define BIT_READ(x,y) (((x)>>(y))&0x01)
-#define BIT_WRITE(x,y,z) ((z)?(BIT_ON(x,y)):(BIT_OFF(x,y)))
+#define BIT_WRITE(x,y,z) ((z)?(BIT_ON(x,y,z)):(BIT_OFF(x,y)))
 
 #define HI(x) (x>>8)
 #define LO(x) (x^0xFF)
@@ -31,19 +31,23 @@
 #define ROUND(x) ((x)>=0?(long)((x)+0.5):(long)((x)-0.5))
 
 ///порт B///
-#define LCD_DREG DDRB
-#define LCD_DPORT PORTB
+#define LDDR DDRB
+#define LDP PORTB
 #define LCD_D0 PINB0
 #define LCD_D1 PINB1
 #define LCD_D2 PINB2
 #define LCD_D3 PINB3
+#define LCD_D4 PINB0
+#define LCD_D5 PINB1
+#define LCD_D6 PINB2
+#define LCD_D7 PINB3
 ///порт C///
 #define SENSOR_REG DDRC
 #define TEMP_SENSOR PINC0
 
-#define LCD_CREG DDRC
-#define LCD_CPORT PORTC
-#define LCD_EN PINC3
+#define LCDR DDRC
+#define LCP PORTC
+#define LCD_E PINC3
 #define LCD_RW PINC2
 #define LCD_RS PINC1
 ///порт D///

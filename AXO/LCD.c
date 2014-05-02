@@ -25,12 +25,10 @@ int LCD_Busy()
     {
         LCD_DPORT&= ~(1 << LCD_D0)&~(1 << LCD_D1)&~(1 << LCD_D2)&~(1 << LCD_D3);
         LCD_DREG|= (1 << LCD_D0)|(1 << LCD_D1)|(1 << LCD_D2)|(1 << LCD_D3);
-        writelcd;
-        return 1;
+        //return 1;
     }
     LCD_DPORT&= ~(1 << LCD_D0)&~(1 << LCD_D1)&~(1 << LCD_D2)&~(1 << LCD_D3);
     LCD_DREG|= (1 << LCD_D0)|(1 << LCD_D1)|(1 << LCD_D2)|(1 << LCD_D3);
-    writelcd;
     return 0;
 }
 
@@ -38,6 +36,7 @@ int LCD_Busy()
  {
     while(LCD_Busy());
     control;
+    writelcd;
     BIT_WRITE(LCD_DPORT, LCD_D3, 0);
     BIT_WRITE(LCD_DPORT, LCD_D2, 0);
     BIT_WRITE(LCD_DPORT, LCD_D1, 0);

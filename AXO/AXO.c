@@ -10,17 +10,22 @@
 #define BAUD_DIVIDER ((F_CPU/(BAUD*8))-1)
 #define LCD_LENGTH 16;
 #define LCD_WIDTH 2;
+#define LCD_4bit
 
 #define BYTE_TO_VOLTS(x) ((x * 5.0)/1024)
 #define BYTE_TO_MILLIVOLTS(x) ((x * 5000.0)/1024)
 #define BYTE_TO_TEMP(x) (x * 0.19) // оригинальная формула, специфичная для датчика TMP036: T= (Vin(mV) - 500)/10
 
-
 #include <avr/io.h>
 #include <avr/interrupt.h>
 #include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
 #include "Defines.h"
-#include "LCD.h"
+#include "d2c.h"
+//#include "LCD.h"
+#include "lcd_lib.h"
+//#include "BIN2ASCII.h"
 
 ///глобальные константы///
 const uint8_t timeOut= 0x0A;
@@ -29,15 +34,24 @@ volatile static uint8_t runSeconds;
 volatile static double temperatureValue;
 volatile static double targetTemp= 20.0;
 volatile static double Tolerance= 0.0;
-volatile static uint8_t measureRate= 0x80; // поумолчанию - частота замера (F_CPU/1024)/2
+volatile static uint8_t measureRate= 0x80; // по-умолчанию - частота замера (F_CPU/1024)/2
 volatile char USART_buffer[8];
 volatile static int USART_index;
 uint8_t progFlags= 0b00000100;
 
+void doubleToChar(char* c, double d) {
+    int i;
+    enum { LEN=8 };
+    char res[LEN];
+    for (i=0; i<8; ++i){
+        snprintf (res, LEN, "%4.8f", d);
+    }
+}
+
 inline static void turnOnFan() 
 {
-	BIT_ON(CONTROL_PORT, FAN);
-	BIT_ON(progFlags, FAN_ON);
+	BIT_WRITE(CONTROL_PORT, FAN, 1);
+	BIT_WRITE(progFlags, FAN_ON, 1);
 }
 
 inline static void turnOffFan()
@@ -51,8 +65,8 @@ inline static void turnOnCooler()
     if(!BIT_READ(progFlags, COOLING))
     {   
         turnOnFan();
-	    BIT_ON(CONTROL_PORT, LOAD);
-        BIT_ON(progFlags, COOLING);
+	    BIT_WRITE(CONTROL_PORT, LOAD, 1);
+        BIT_WRITE(progFlags, COOLING, 1);
     }
 }
 
@@ -60,6 +74,7 @@ inline static void turnOffCooler()
 {
     if(BIT_READ(progFlags, COOLING))
     {
+        turnOffFan();
 	    BIT_OFF(CONTROL_PORT, LOAD);
         BIT_OFF(progFlags, COOLING);
     }
@@ -67,16 +82,20 @@ inline static void turnOffCooler()
 
 inline static void sendData( volatile double a) 
 {
-    memcpy(&USART_buffer,&a, 8);
+    //BIN8toASCII3(USART_buffer[0], USART_buffer[1], USART_buffer[2],a); //TODO: доопределить
+    //memcpy(&USART_buffer,&a, 8);
+    USART_buffer[7]= '\n';
     UDR0= *USART_buffer;
     USART_index= 1;
     //USART_buffer++;
+    BIT_WRITE(UCSR0B, UDRIE0, 1);
 }
 
 void turnOnSleep()
 {
     //TODO: разрешить прерывание INT1
     //TODO: отключить непрерывное преобразование АЦП
+    //TODO: запретить прерывание по переполнению таймера 2
     //BIT_ON(PRR, PRADC); // режим работы во сне
     //BIT_ON(SMCR, SM0);
     //SMCR |= 1 << SE; // засыпает
@@ -86,25 +105,34 @@ void turnOffSleep()
 {
     //TODO: запретить прерывание INT1
     //TODO: включить непрерывное преобразование АЦП
-    //TODO: 
+    //TODO: разрешить прерывание по переполнению таймера 2
     //BIT_OFF(PRR, PRADC);
     //BIT_OFF(SMCR, SM0);
 }
 
+void LCD_prepare(unsigned char* str, uint8_t size, int x, int y)
+{
+    LCDGotoXY(x, y);
+    LCDstring(str, size);
+}
+
 void LCD_DisplayAll()
 {   
-	LCD_Write("TEMP :", 6, 0, 0);
-    LCD_Write((char)temperatureValue, 1, 0, 8);
+    LCDGotoXY(6, 0);
+    LCDstring(double2char(temperatureValue), 8);
     if (BIT_READ(progFlags, COOLING))
     {
-        LCD_Write("COOLING ", 8, 1, 0);
-        LCD_Write((char)((temperatureValue - targetTemp)/Tolerance)*100, 1, 1, 8);
+        LCDGotoXY(0, 1);
+        LCDstring("COOLING ", 8);
+        LCDGotoXY(8, 1);
+        LCDstring(double2char(((temperatureValue - targetTemp)/Tolerance)*100), 8);
     }
 }
 
 inline void menuStop()
 {
-    LCD_Clear();
+    LCDclr();
+    LCD_prepare("TEMP:", 5, 0, 0);
     LCD_DisplayAll();
 }
 
@@ -135,7 +163,7 @@ void menuRun()              //TODO: определить пункты меню через структуры, соде
     int pos= 0;
     char menu[4][16]= {"Target temp  (1)", "Tolerance    (2)", "Measure rate (3)", "P-save mode  (4)"};
 	int values[4]= {targetTemp, Tolerance, measureRate, (BIT_READ(progFlags, ECONOMY))};
-    LCD_Clear();
+    LCDclr();
     while ((BIT_READ(progFlags, INACTIVE))||(!BIT_READ(CONTROL_PORT, BUTTON_BACK))){
         if (!BIT_READ(CONTROL_PORT, BUTTON_OK)){
             BIT_OFF(progFlags, INACTIVE);
@@ -167,8 +195,10 @@ void menuRun()              //TODO: определить пункты меню через структуры, соде
                 }                  
             }
         }
-        LCD_Write(menu[pos],16,0,0);
-        LCD_Write(values[pos],1,1,0);
+        LCDGotoXY(0, 0);
+        LCDstring(menu[pos],16);
+        LCDGotoXY(0, 1);
+        LCDstring(values[pos],1);
         if (!BIT_READ(CONTROL_PORT, BUTTON_P))
         {
             BIT_OFF(progFlags, INACTIVE);
@@ -188,7 +218,7 @@ void menuRun()              //TODO: определить пункты меню через структуры, соде
 }
 
 int main(void)
-{   
+{
     ///инициализация УСАПП///
     UBRR0 = ROUND(BAUD_DIVIDER);//( F_CPU /( baud * 16 ) ) - 1; // установка бодрейта
     BIT_WRITE(UCSR0C, UPM01, 0);  // проверка четности отключена
@@ -236,7 +266,7 @@ int main(void)
     TIMSK2 |= 1 << TOIE2; // разрешить прерывание таймера по переполнению
     //////////////////////////////////////////////////////////////////////////
     
-    LCD_Init();
+    LCDinit();
 
     BIT_WRITE(PRR, PRTWI, 1); // отключить питание TWI для уменьшения энергопотребления
     BIT_WRITE(PRR, PRTIM1, 1); // отключить питание таймера 1 для уменьшения энергопотребления
@@ -256,8 +286,9 @@ int main(void)
         if ((!BIT_READ(PIND, BUTTON_M))||(!BIT_READ(PIND, BUTTON_P))||(!BIT_READ(PIND, BUTTON_BACK))) // если нажата любая кнопка
         {
             BIT_OFF(progFlags, INACTIVE); // выйти из режима неактивности
-            BIT_ON(progFlags, LCD_ON);
-            LCD_turnOn();
+            BIT_WRITE(progFlags, LCD_ON, 1);
+            LCD_prepare("TEMP:", 5, 0, 0);
+            LCDvisible();
         }
         //////////////////////////////////////////////////////////////////////////
         // задача : входить в меню если нажата кнопка OK/MENU
@@ -267,10 +298,11 @@ int main(void)
             BIT_OFF(progFlags, INACTIVE); // выйти из режима неактивности
             if (!BIT_READ(progFlags, LCD_ON))
             {
-                BIT_ON(progFlags, LCD_ON); // включить подсветку дисплея
-                LCD_turnOn();
+                BIT_WRITE(progFlags, LCD_ON, 1); // включить подсветку дисплея
+                LCD_prepare("TEMP:", 5, 0, 0);
+                LCDvisible();
             }
-            BIT_ON(progFlags, MENU_ON); // включить меню
+            BIT_WRITE(progFlags, MENU_ON, 1); // включить меню
             menuRun(); // обработка команд меню
         }
         //////////////////////////////////////////////////////////////////////////
@@ -281,13 +313,14 @@ int main(void)
             if(BIT_READ(progFlags, LCD_ON))
             {
                 BIT_OFF(progFlags, LCD_ON);
-                LCD_turnOff();
+                LCDblank();
             }
             else if (BIT_READ(progFlags, ECONOMY))
             {
                 turnOnSleep();
             }
         }
+        
         //////////////////////////////////////////////////////////////////////////
         // задача : отобажать данные если подсветка включена
         //////////////////////////////////////////////////////////////////////////
@@ -327,11 +360,8 @@ ISR(TIMER2_OVF_vect){
     runSeconds++;
     if (runSeconds==timeOut)
     {
-        runSeconds= 0; // сбрасываем счетчик секунд
-        BIT_ON(progFlags, INACTIVE);
-        if(BIT_READ(progFlags, FAN_ON)){
-            turnOffFan();
-        }
+        runSeconds= 0; // сбрасывает счетчик секунд
+        BIT_WRITE(progFlags, INACTIVE, 1);
     }
     return;
 }
@@ -345,15 +375,22 @@ ISR(INT1_vect){
     // задача : выходить из сна
     //////////////////////////////////////////////////////////////////////////
     turnOffSleep();
-    BIT_ON(progFlags, LCD_ON);
-    LCD_turnOn();
+    BIT_WRITE(progFlags, LCD_ON, 1);
+    LCD_prepare("TEMP:", 5, 0, 0);
+    LCDvisible();
 }
 
 ISR(USART_UDRE_vect){
     //////////////////////////////////////////////////////////////////////////
     // задача : отдавать модулю УСАПП следующий байт сообщения
     //////////////////////////////////////////////////////////////////////////
-    if(USART_index > 7) return;
     UDR0= USART_buffer[USART_index];
     USART_index++;
+    if(USART_index == 8) {
+        BIT_WRITE(UCSR0B, UDRIE0, 0);
+    }
+}
+
+ISR(USART_TX_vect){
+    return;
 }
