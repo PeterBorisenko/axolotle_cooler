@@ -15,7 +15,7 @@ AXO.d AXO.o AXO.o: .././AXO.c \
   d:/winavr-20100110/lib/gcc/../../avr/include/stdlib.h \
   d:/winavr-20100110/lib/gcc/../../avr/include/stdio.h \
   d:\winavr-20100110\bin\../lib/gcc/avr/4.3.3/include/stdarg.h \
-  .././Defines.h .././lcd_lib.h
+  .././Defines.h .././d2c.h .././lcd_lib.h
 
 d:/winavr-20100110/lib/gcc/../../avr/include/avr/io.h:
 
@@ -50,5 +50,7 @@ d:/winavr-20100110/lib/gcc/../../avr/include/stdio.h:
 d:\winavr-20100110\bin\../lib/gcc/avr/4.3.3/include/stdarg.h:
 
 .././Defines.h:
+
+.././d2c.h:
 
 .././lcd_lib.h:

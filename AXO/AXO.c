@@ -118,14 +118,17 @@ void LCD_prepare(unsigned char* str, uint8_t size, int x, int y)
 
 void LCD_DisplayAll()
 {   
+    char arr[5];
     LCDGotoXY(6, 0);
-    LCDstring(double2char(temperatureValue), 8);
+    double2char(arr, temperatureValue);
+    LCDstring(arr, 8);
     if (BIT_READ(progFlags, COOLING))
     {
         LCDGotoXY(0, 1);
         LCDstring("COOLING ", 8);
         LCDGotoXY(8, 1);
-        LCDstring(double2char(((temperatureValue - targetTemp)/Tolerance)*100), 8);
+        double2char(arr, ((temperatureValue - targetTemp)/Tolerance)*100);
+        LCDstring(arr, 8);
     }
 }
 
