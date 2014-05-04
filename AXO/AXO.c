@@ -31,11 +31,8 @@
 #include "lcd_lib.h"
 //#include "BIN2ASCII.h"
 
-#ifdef IOM16_H
-#define MEGA_16
-#elif defined IOM_168
+//#define MEGA_16
 #define MEGA_168
-#endif
 
 ///глобальные константы///
 const uint8_t timeOut= 0x0A;
@@ -256,17 +253,17 @@ int main(void)
     //////////////////////////////////////////////////////////////////////////
     #elif defined MEGA_168
     UBRR0= ROUND(BAUD_DIVIDER);//( F_CPU /( baud * 16 ) ) - 1; // установка бодрейта
-    BIT_write(UCSRC0, UPM01, 0);  // проверка четности отключена
-    BIT_write(UCSRC0, UPM00, 0);  // ----||----
-    BIT_write(UCSRB0, UCSZ02, 0);    // 8 битов данных
-    BIT_write(UCSRC0, UCSZ01, 1);    // ----||----
-    BIT_write(UCSRC0, UCSZ00, 1);    // ----||----
-    BIT_write(UCSRC0, USBS0, 0);  // 1 стоповый бит
-    BIT_write(UCSRB0, TXEN0, 1);  // передача разрешена
-    BIT_write(UCSRB0, RXEN0, 0);  // прием запрещен
-    BIT_write(UCSRB0, RXCIE0, 0); // прерывание приема запрещено
-    BIT_write(UCSRB0, TXCIE0, 1); // прерывание конца передачи разрешено
-    BIT_write(UCSRB0, UDRIE0, 0);
+    BIT_write(UCSR0C, UPM01, 0);  // проверка четности отключена
+    BIT_write(UCSR0C, UPM00, 0);  // ----||----
+    BIT_write(UCSR0B, UCSZ02, 0);    // 8 битов данных
+    BIT_write(UCSR0C, UCSZ01, 1);    // ----||----
+    BIT_write(UCSR0C, UCSZ00, 1);    // ----||----
+    BIT_write(UCSR0C, USBS0, 0);  // 1 стоповый бит
+    BIT_write(UCSR0B, TXEN0, 1);  // передача разрешена
+    BIT_write(UCSR0B, RXEN0, 0);  // прием запрещен
+    BIT_write(UCSR0B, RXCIE0, 0); // прерывание приема запрещено
+    BIT_write(UCSR0B, TXCIE0, 1); // прерывание конца передачи разрешено
+    BIT_write(UCSR0B, UDRIE0, 0);
     #endif
     ///инициализация портов///
     SENSOR_REG&= ~(1 << TEMP_SENSOR); // термодатчик на вход
