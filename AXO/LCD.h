@@ -95,12 +95,12 @@
 #define LCD_RW PINC2
 #endif
 
- #define control (BIT_OFF(LCD_CPORT,LCD_RS))
- #define data (BIT_WRITE(LCD_CPORT, LCD_RS, 1))
- #define enable (BIT_WRITE(LCD_CPORT, LCD_EN, 1))
- #define disable (BIT_OFF(LCD_CPORT, LCD_EN))
- #define readlcd (BIT_WRITE(LCD_CPORT, LCD_RW, 1))
- #define writelcd (BIT_OFF(LCD_CPORT, LCD_RW))
+ #define control (BIT_clear(LCD_CPORT,LCD_RS))
+ #define data (BIT_write(LCD_CPORT, LCD_RS, 1))
+ #define enable (BIT_write(LCD_CPORT, LCD_EN, 1))
+ #define disable (BIT_clear(LCD_CPORT, LCD_EN))
+ #define readlcd (BIT_write(LCD_CPORT, LCD_RW, 1))
+ #define writelcd (BIT_clear(LCD_CPORT, LCD_RW))
 
 #include <avr/io.h>
 #include <avr/interrupt.h>

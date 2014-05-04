@@ -279,11 +279,13 @@ void LCDcursorOFF(void)	//turns OFF cursor
 	LCDsendCommand(0x0C);
 }
 void LCDblank(void)		//blanks LCD
-{
+{   
+    BIT_write(CONTROL_PORT, LCD_LED, 0);
 	LCDsendCommand(0x08);
 }
 void LCDvisible(void)		//Shows LCD
 {
+    BIT_write(CONTROL_PORT, LCD_LED, 1);
 	LCDsendCommand(0x0C);
 }
 void LCDcursorLeft(uint8_t n)	//Moves cursor by n poisitions left
