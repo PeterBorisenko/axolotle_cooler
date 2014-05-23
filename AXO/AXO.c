@@ -123,14 +123,12 @@ void turnOffSleep()
     //BIT_OFF(SMCR, SM0);
 }
 
-void LCD_prepare(unsigned char* str, uint8_t size, int x, int y)
-{
-    LCDGotoXY(x, y);
-    LCDstring(str, size);
-}
 
-void LCD_DisplayAll()
+inline void LCD_DisplayInfo()
 {   
+    LCDclr();
+    LCDGotoXY(0, 0);
+    LCDstring("TEMP: ", 6);
     char arr[5];
     LCDGotoXY(6, 0);
     double2char(arr, temperatureValue);
@@ -145,12 +143,6 @@ void LCD_DisplayAll()
     }
 }
 
-inline void menuStop()
-{
-    LCDclr();
-    LCD_prepare("TEMP:", 5, 0, 0);
-    LCD_DisplayAll();
-}
 
 inline int inRange(int pos, int value)
 {
@@ -180,21 +172,24 @@ void menuRun()              //TODO: определить пункты меню через структуры, соде
     char menu[4][16]= {"Target temp  (1)", "Tolerance    (2)", "Measure rate (3)", "P-save mode  (4)"};
 	int values[4]= {targetTemp, Tolerance, measureRate, (BIT_read(progFlags, ECONOMY))};
     LCDclr();
-    while ((BIT_read(progFlags, INACTIVE))||(!BIT_read(CONTROL_PORT, BUTTON_BACK))){
+    while (!(BIT_read(progFlags, INACTIVE)||(!BIT_read(CONTROL_PORT, BUTTON_BACK)))){
         if (!BIT_read(CONTROL_PORT, BUTTON_OK)){
             BIT_clear(progFlags, INACTIVE);
+            runSeconds= 0;
             int value= values[pos];
-            while((BIT_read(progFlags, INACTIVE))||(!BIT_read(CONTROL_PORT, BUTTON_BACK))){
+            while(!(BIT_read(progFlags, INACTIVE)||(!BIT_read(CONTROL_PORT, BUTTON_BACK)))){
                 //LCD_Write(values[pos],1,0);
                 if (!BIT_read(CONTROL_PORT, BUTTON_P))
                 {
                     BIT_clear(progFlags, INACTIVE);
+                    runSeconds= 0;
                     //values[pos]++;
                     values[pos]= inRange(pos, ++values[pos]);
                 }
                 if (!BIT_read(CONTROL_PORT, BUTTON_M))
                 {
                     BIT_clear(progFlags, INACTIVE);
+                    runSeconds= 0;
                     //values[pos]--;
                     values[pos]= inRange(pos, --values[pos]);
 
@@ -208,9 +203,15 @@ void menuRun()              //TODO: определить пункты меню через структуры, соде
                         BIT_write(progFlags, ECONOMY, value);
                         break;
                     }          
-                }                  
+                }
+                LCDclr();
+                LCDGotoXY(0, 0);
+                LCDstring(menu[pos],16);
+                LCDGotoXY(0, 1);
+                LCDstring(values[pos],1);               
             }
         }
+        LCDclr();
         LCDGotoXY(0, 0);
         LCDstring(menu[pos],16);
         LCDGotoXY(0, 1);
@@ -218,19 +219,22 @@ void menuRun()              //TODO: определить пункты меню через структуры, соде
         if (!BIT_read(CONTROL_PORT, BUTTON_P))
         {
             BIT_clear(progFlags, INACTIVE);
+            runSeconds= 0;
             pos++;
             pos= CIRCLE(pos, 0, 3);
         }
         if (!BIT_read(CONTROL_PORT, BUTTON_M))
         {
             BIT_clear(progFlags, INACTIVE);
+            runSeconds= 0;
             pos--;
             pos= CIRCLE(pos, 0, 3);
         }
     }
     BIT_clear(progFlags, MENU_ON);
     BIT_clear(progFlags, INACTIVE);
-    menuStop();
+    runSeconds= 0;
+    LCD_DisplayInfo();
 }
 
 int main(void)
@@ -317,8 +321,8 @@ int main(void)
         if ((!BIT_read(PIND, BUTTON_M))||(!BIT_read(PIND, BUTTON_P))||(!BIT_read(PIND, BUTTON_BACK))) // если нажата любая кнопка
         {
             BIT_clear(progFlags, INACTIVE); // выйти из режима неактивности
+            runSeconds= 0;
             BIT_write(progFlags, LCD_ON, 1);
-            LCD_prepare("TEMP:", 5, 0, 0);
             LCDvisible();
         }
         //////////////////////////////////////////////////////////////////////////
@@ -327,14 +331,28 @@ int main(void)
         if (!BIT_read(PIND,BUTTON_OK)) // если нажата кнопка OK/MENU                        //TODO: в режиме P-save кнопка OK/MENU должна висеть на прерывании INT1
         {
             BIT_clear(progFlags, INACTIVE); // выйти из режима неактивности
+            runSeconds= 0;
             if (!BIT_read(progFlags, LCD_ON))
             {
-                BIT_write(progFlags, LCD_ON, 1); // включить подсветку дисплея
-                LCD_prepare("TEMP:", 5, 0, 0);
+                BIT_write(progFlags, LCD_ON, 1); // включить подсветку дисплея7
                 LCDvisible();
             }
             BIT_write(progFlags, MENU_ON, 1); // включить меню
             menuRun(); // обработка команд меню
+        }
+        //////////////////////////////////////////////////////////////////////////
+        // задача : отображать данные если подсветка включена или включено охлаждение
+        //////////////////////////////////////////////////////////////////////////
+        if ((BIT_read(progFlags, COOLING)&&(!BIT_read(progFlags, ECONOMY))))
+        {
+            runSeconds= 0;
+            BIT_clear(progFlags, INACTIVE);
+            LCDvisible();
+            LCD_DisplayInfo();
+        }
+        else if (BIT_read(progFlags, LCD_ON))
+        {
+            LCD_DisplayInfo();
         }
         //////////////////////////////////////////////////////////////////////////
         // задача : выключать подсветку по истечении таймаута, засыпать
@@ -350,20 +368,6 @@ int main(void)
             {
                 turnOnSleep();
             }
-        }
-        
-        //////////////////////////////////////////////////////////////////////////
-        // задача : отображать данные если подсветка включена или включено охлаждение
-        //////////////////////////////////////////////////////////////////////////
-        if (BIT_read(progFlags, LCD_ON))
-        {
-            LCD_DisplayAll();
-        }
-        else if ((BIT_read(progFlags, COOLING)&&!(BIT_read(progFlags, ECONOMY))))
-        {
-            BIT_clear(progFlags, INACTIVE);
-            LCDvisible();
-            LCD_DisplayAll();
         }
     }
 }
@@ -413,7 +417,6 @@ ISR(INT1_vect){
     //////////////////////////////////////////////////////////////////////////
     turnOffSleep();
     BIT_write(progFlags, LCD_ON, 1);
-    LCD_prepare("TEMP:", 5, 0, 0);
     LCDvisible();
 }
 
